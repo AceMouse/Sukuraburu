@@ -4,34 +4,8 @@ module internal Eval
 
     open StateMonad
 
-    (* Code for testing *)
-
-    let hello = [('H',4);('E',1);('L',1);('L',1);('O',1)] 
-    let state = mkState [("x", 5); ("y", 42)] hello ["_pos_"; "_result_"]
-    let emptyState = mkState [] [] []
-    
-    let add (a:SM<int>) (b:SM<int>) : SM<int> =
-        a >>= fun x ->
-        b >>= fun y ->
-        ret(y + x)
-        
-    let sub (a:SM<int>) (b:SM<int>) : SM<int> =
-        a >>= fun x ->
-        b >>= fun y ->
-        ret(x - y)
-        
-    let mul (a:SM<int>) (b:SM<int>) : SM<int> =
-        a >>= fun x ->
-        b >>= fun y ->
-        ret(y * x)
-    let div  (a:SM<int>) (b:SM<int>) : SM<int> =
-        a >>= fun x ->
-        b >>= fun y ->
-            match y with 
-            | 0 -> fail DivisionByZero
-            | _ -> ret(x / y)
-        
-        
+    let add a b = failwith "Not implemented"      
+    let div a b = failwith "Not implemented"      
 
     type aExp =
         | N of int
@@ -63,8 +37,7 @@ module internal Eval
        | Conj of bExp * bExp  (* boolean conjunction *)
 
        | IsVowel of cExp      (* check for vowel *)
-       | IsLetter of cExp     (* check for letter *)
-       | IsDigit of cExp      (* check for digit *)
+       | IsConsonant of cExp  (* check for constant *)
 
     let (.+.) a b = Add (a, b)
     let (.-.) a b = Sub (a, b)
@@ -83,53 +56,12 @@ module internal Eval
     let (.<=.) a b = a .<. b .||. ~~(a .<>. b)
     let (.>=.) a b = ~~(a .<. b)                (* numeric greater than or equal to *)
     let (.>.) a b = ~~(a .=. b) .&&. (a .>=. b) (* numeric greater than *)    
-    
-    
-    let rec charEval cExp : SM<char> =
-        match cExp with
-            | C c           -> ret(c)
-            | CV a          -> (arithEval a) >>= characterValue
-            | ToUpper c     -> (charEval c) >>= fun ch -> ret(System.Char.ToUpper ch)
-            | ToLower c     -> (charEval c) >>= fun ch -> ret(System.Char.ToLower ch)
-            | IntToChar a   -> (arithEval a) >>= fun x -> ret ((char) x)
-    and arithEval (aExp:aExp) : SM<int> =
-        match aExp with
-            | N a           -> ret(a)
-            | V a           -> lookup a
-            | WL            -> wordLength
-            | PV a          -> (arithEval a) >>= pointValue
-            | Mul (a, b)    -> mul (arithEval a) (arithEval b)
-            | Add (a, b)    -> add (arithEval a) (arithEval b)
-            | Sub (a, b)    -> sub (arithEval a) (arithEval b)
-            | Div (a, b)    -> div (arithEval a) (arithEval b)
-            | Mod (a, b)    ->
-                let evalA = (arithEval a)
-                let evalB = (arithEval b)
-                sub evalA (mul (div evalA evalB) evalB)
-            | CharToInt c   -> (charEval c) >>= fun x -> ret ((int) x)
-    and boolEval bExp : SM<bool> =
-        match bExp with
-            | TT            -> ret true
-            | FF            -> ret false
-            | AEq (a, b)    -> (arithEval a) >>= fun x ->
-                               (arithEval b) >>= fun y -> ret (x = y)
-            | ALt (a, b)    -> (arithEval a) >>= fun x ->
-                               (arithEval b) >>= fun y -> ret (x < y)
-            | Not a         -> (boolEval a) >>= fun x -> ret (not x)
-            | Conj (a, b)   -> (boolEval a) >>= fun x ->
-                               (boolEval b) >>= fun y -> ret (x && y)
-            | IsVowel c     ->
-                (charEval c) >>= fun c ->
-                ret <|
-                match (System.Char.ToLower c) with
-                    | 'a' | 'e' | 'u' | 'i'| 'o' -> true
-                    | _ -> false
-            | IsLetter c     ->
-                (charEval c) >>= fun c ->
-                ret <| System.Char.IsLetter c
-            | IsDigit c     ->
-                (charEval c) >>= fun c ->
-                ret <| System.Char.IsDigit c
+
+    let arithEval a : SM<int> = failwith "Not implemented"      
+
+    let charEval c : SM<char> = failwith "Not implemented"      
+
+    let boolEval b : SM<bool> = failwith "Not implemented"
 
 
     type stm =                (* statements *)
