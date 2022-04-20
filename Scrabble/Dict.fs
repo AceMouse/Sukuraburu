@@ -1,6 +1,5 @@
 module Dictionary
 
-
 type Dict =
     | Node of char * bool * Map<char,Dict>
     | StartNode of bool * Map<char,Dict>
