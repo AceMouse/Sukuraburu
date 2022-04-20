@@ -1,8 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <RepositoryUrl>https://github.com/AceMouse/Sukuraburu</RepositoryUrl>
     <TargetFramework>net6.0</TargetFramework>
-    </PropertyGroup>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Company>IT University of Copenhagen</Company>
+
+    <Version>1.0.0</Version>
+    <PackageId>Sukuraburu</PackageId>
+    <AssemblyName>Sukuraburu</AssemblyName>
+    <Authors>Asmus Tørsleff, Anton Nielsen, Alexander Jacobsen</Authors>
+    <Product>Sukuraburu</Product>
+    <Description>Scrabble Bot for Functional Programming 2022
+      Group name: Sukuraburu</Description>
+  </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="MultiSet.fsi" />
