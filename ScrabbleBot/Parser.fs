@@ -96,8 +96,26 @@ module internal Parser
     let CVParser = pCharValue >*>. parenthesise TermParse |>> CV <?> "CV"
     do cref := choice [TLoParser; TUpParser; ITCParser; CVParser; ChaParser]
     let CexpParse = CharParse
-
-    let BexpParse = pstring "not implemented"
+    
+    let BTermParse, btref = createParserForwardedToRef<bExp>()
+    let BProdParse, bpref = createParserForwardedToRef<bExp>()
+    let BAtomParse, baref = createParserForwardedToRef<bExp>()
+    let TruParser = pstring "true" |>> (fun _ -> TT) <?> "TT"
+    let FlsParser = pstring "false" |>> (fun _ -> FF) <?> "FF"
+    let AndParser =  BTermParse .>*> pstring @"/\" .>*>. BTermParse |>> Conj <?> "Conj"
+    let OrParser =  BTermParse .>*> pstring @"\/" .>*>. BTermParse |>> (fun (a,b) -> ((.||.) a b)) <?> "Disj"
+    let AEqParser = AexpParse .>*> pchar '=' .>*>. AexpParse |>> AEq <?> "AEq"
+    let ANEqParser =  AexpParse .>*> pstring "<>" .>*>. AexpParse |>> (fun (a,b) -> ((.<>.) a b)) <?> "ANEq"
+    let ALTParser =  AexpParse .>*> pchar '<' .>*>. AexpParse |>> (fun (a,b) -> ((.<.) a b)) <?> "ALT"
+    let ALEqParser =  AexpParse .>*> pstring "<=" .>*>. AexpParse |>> (fun (a,b) -> ((.<=.) a b)) <?> "ALEq"
+    let AGTParser =  AexpParse .>*> pchar '>' .>*>. AexpParse |>> (fun (a,b) -> ((.>.) a b)) <?> "AGT"
+    let AGEqParser =  AexpParse .>*> pstring ">=" .>*>. AexpParse |>> (fun (a,b) -> ((.>=.) a b)) <?> "AGEq"
+    let NegParser = pchar '~' >*>. BTermParse |>> Not <?> "Not"
+    let IsLetter = pIsLetter >*>. parenthesise CharParse |>> IsLetter <?> "IsLetter"
+    let IsDigit = pIsDigit >*>. parenthesise CharParse |>> IsDigit <?> "IsDigit"
+    do baref := choice [NegParser; IsDigit; IsLetter; TruParser; FlsParser]
+    do bpref := choice [AEqParser; ANEqParser; AGEqParser; ALEqParser; AGTParser; ALTParser; BAtomParse]
+    do btref := choice [AndParser; OrParser; BProdParse]
 
     let stmParse = pstring "not implemented"
 

@@ -2,7 +2,8 @@
 // Learn more about F# at http://fsharp.org
 
 open System
-
+open System.Collections.Generic
+open System.IO
 let time f =
     let start = System.DateTime.Now
     let res = f ()
@@ -55,6 +56,7 @@ let main argv =
     // Uncomment this line to call your client
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
+    
     let players    = [("Sukuraburu", dictionary, Sukuraburu.Scrabble.startGame)]
 
     //let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 2
@@ -63,6 +65,10 @@ let main argv =
     do ScrabbleServer.Comm.startGame 
           board dictionary handSize timeout tiles seed port players
     
+    
+    
+    let a = ScrabbleUtil.Dictionary.test <| (File.ReadAllLines "/home/asmus/RiderProjects/Sukuraburu/Scrabble/Dictionaries/English.txt") <| 2 <|(dictionary true)
+    a |> string |> System.Console.WriteLine
     ScrabbleUtil.DebugPrint.forcePrint ("Server has terminated. Press Enter to exit program.\n")
     System.Console.ReadLine () |> ignore
 
