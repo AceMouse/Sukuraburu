@@ -1,4 +1,4 @@
-﻿namespace YourClientName
+﻿namespace Sukuraburu
 
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication
