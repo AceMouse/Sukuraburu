@@ -123,7 +123,7 @@ module internal Parser
     let DeclareParser = pdeclare >>. spaces1 >>. many pletter |>> List.toArray |> string |> Declare
     let AssParser = many pletter .>*> pstring ":=" .>*>. TermParse |>> fun (v,a) -> Ass ((v |> List.toArray |> string), a)
     let SeqParser = stmntParser .>*> pchar ';' .>*>. stmntParser |>> Seq
-    let ITEParser = pif >*>. parenthesise BTermParse .>*> pthen .>*>. curlysise stmntParser .>*> pelse .>*>. curlysise stmntParser |>> ITE
+    let ITEParser = pif >*>. parenthesise BTermParse .>*> pthen .>*>. curlysise stmntParser .>*> pelse .>*>. curlysise stmntParser |>> fun ((b, st1), st2) -> ITE (b, st1, st2)
     
     let stmntParse = pstring "not implemented"
     do sref := choice []
