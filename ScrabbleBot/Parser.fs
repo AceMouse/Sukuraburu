@@ -117,7 +117,12 @@ module internal Parser
     do bpref := choice [AEqParser; ANEqParser; AGEqParser; ALEqParser; AGTParser; ALTParser; BAtomParse]
     do btref := choice [AndParser; OrParser; BProdParse]
 
-    let stmParse = pstring "not implemented"
+    let bruh, sref = createParserForwardedToRef<stm>()
+    
+    let DeclareParser = pstring "declare" >*>. many CharParse |>> fun x -> List.map charEval x |> List.toArray |> String |> Declare
+    
+    let stmntParse = pstring "not implemented"
+    do sref := choice []
 
     (* The rest of your parser goes here *)
     type word   = (char * int) list
