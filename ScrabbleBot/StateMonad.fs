@@ -81,5 +81,7 @@ module internal StateMonad
               | Some v -> Success (v, s)
               | None   -> Failure (VarNotFound x))
 
-    let declare (var : string) : SM<unit> = failwith "Not implemented"   
-    let update (var : string) (value : int) : SM<unit> = failwith "Not implemented"      
+    let declare (var : string) : SM<unit> =
+        S (fun s -> Success((), {s with vars = (Map.add var 0 s.vars.Head) :: s.vars.Tail}))
+    let update (var : string) (value : int) : SM<unit> =
+        S (fun s -> Success((), {s with vars = (Map.add var value s.vars.Head) :: s.vars.Tail}))

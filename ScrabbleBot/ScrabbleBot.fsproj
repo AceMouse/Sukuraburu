@@ -28,6 +28,7 @@
     <Compile Include="Scrabble.fsi" />
     <Compile Include="Scrabble.fs" />
     <Compile Include="BestMove.fsi" />
+    <Compile Include="BestMove.fs" />
   </ItemGroup>
 
   <ItemGroup>

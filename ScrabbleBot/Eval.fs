@@ -140,8 +140,18 @@ module internal Eval
     | ITE of bExp * stm * stm (* if-then-else statement *)
     | While of bExp * stm     (* while statement *)
 
-    let rec stmntEval stmnt : SM<unit> = failwith "Not implemented"
-
+    let rec stmntEval stmnt : SM<unit> =
+        match stmnt with
+            | Declare s -> declare s
+            | Ass(s, aExp) -> arithEval aExp >>= update s 
+            | Skip -> ret(())
+            | Seq (st1, st2) -> stmntEval st1 >>>= stmntEval st2
+            | ITE (b, st1, st2) -> boolEval b >>= fun b -> if b then stmntEval st1 else stmntEval st2
+            | While (b, st) -> ret(())
+                    
+                    
+                                    
+    
 (* Part 3 (Optional) *)
 
     type StateBuilder() =
