@@ -120,6 +120,7 @@ module internal Parser
     let bruh, sref = createParserForwardedToRef<stm>()
     
     let DeclareParser = pstring "declare" >>. spaces1 >>. many pletter |>> List.toArray |> string |> Declare
+    let AssParser = many pletter .>*> pstring ":=" .>*>. TermParse |>> fun (v,a) -> Ass ((v |> List.toArray |> string), a)
     
     let stmntParse = pstring "not implemented"
     do sref := choice []
