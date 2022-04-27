@@ -1,4 +1,4 @@
 module BestMove 
-    val suggestMove : ((int * int) * (uint32 * (char * int))) list
+    val suggestMove : Parser.board -> ((int * int) * (uint32 * (char * int))) list
     
 
