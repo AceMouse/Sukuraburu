@@ -54,7 +54,8 @@ module internal Parser
     
     
 
-    let parenthesise p = pchar '(' >*>. p .>*> pchar ')' 
+    let parenthesise p = pchar '(' >*>. p .>*> pchar ')'
+    let curlysise p = pchar '{' >*>. p .>*> pchar '}' 
 
     let pid = pletter <|> pchar '_' .>>. many (palphanumeric <|> pchar '_')|>> (fun (x,xs) -> x::xs) |>> List.toArray |>> System.String
 
@@ -117,10 +118,12 @@ module internal Parser
     do bpref := choice [AEqParser; ANEqParser; AGEqParser; ALEqParser; AGTParser; ALTParser; BAtomParse]
     do btref := choice [AndParser; OrParser; BProdParse]
 
-    let bruh, sref = createParserForwardedToRef<stm>()
+    let stmntParser, sref = createParserForwardedToRef<stm>()
     
-    let DeclareParser = pstring "declare" >>. spaces1 >>. many pletter |>> List.toArray |> string |> Declare
+    let DeclareParser = pdeclare >>. spaces1 >>. many pletter |>> List.toArray |> string |> Declare
     let AssParser = many pletter .>*> pstring ":=" .>*>. TermParse |>> fun (v,a) -> Ass ((v |> List.toArray |> string), a)
+    let SeqParser = stmntParser .>*> pchar ';' .>*>. stmntParser |>> Seq
+    let ITEParser = pif >*>. parenthesise BTermParse .>*> pthen .>*>. curlysise stmntParser .>*> pelse .>*>. curlysise stmntParser |>> ITE
     
     let stmntParse = pstring "not implemented"
     do sref := choice []
