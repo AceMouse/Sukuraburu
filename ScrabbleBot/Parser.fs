@@ -119,7 +119,7 @@ module internal Parser
 
     let bruh, sref = createParserForwardedToRef<stm>()
     
-    let DeclareParser = pstring "declare" >*>. many CharParse |>> fun x -> List.map charEval x |> List.toArray |> String |> Declare
+    let DeclareParser = pstring "declare" >>. spaces1 >>. many pletter |>> List.toArray |> string |> Declare
     
     let stmntParse = pstring "not implemented"
     do sref := choice []
