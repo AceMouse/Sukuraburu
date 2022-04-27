@@ -144,10 +144,10 @@ module internal Eval
         match stmnt with
             | Declare s -> declare s
             | Ass(s, aExp) -> arithEval aExp >>= update s 
-            | Skip -> ret(())
+            | Skip -> ret()
             | Seq (st1, st2) -> stmntEval st1 >>>= stmntEval st2
             | ITE (b, st1, st2) -> boolEval b >>= fun b -> if b then stmntEval st1 else stmntEval st2
-            | While (b, st) -> ret(())
+            | While (b, st) -> boolEval b >>= fun b1 -> if b1 then stmntEval (Seq(st, While(b, st))) else ret ()
                     
                     
                                     
