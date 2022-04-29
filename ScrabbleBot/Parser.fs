@@ -120,13 +120,13 @@ module internal Parser
 
     let stmntParser, sref = createParserForwardedToRef<stm>()
     
-    let DeclareParser = pdeclare >>. spaces1 >>. many pletter |>> List.toArray |> string |> Declare
+    let DeclareParser = pdeclare >>. spaces1 >>. many pletter |>> fun clst -> clst |> List.toArray |> string |> Declare
     let AssParser = many pletter .>*> pstring ":=" .>*>. TermParse |>> fun (v,a) -> Ass ((v |> List.toArray |> string), a)
     let SeqParser = stmntParser .>*> pchar ';' .>*>. stmntParser |>> Seq
     let ITEParser = pif >*>. parenthesise BTermParse .>*> pthen .>*>. curlysise stmntParser .>*> pelse .>*>. curlysise stmntParser |>> fun ((b, st1), st2) -> ITE (b, st1, st2)
+    let WhileParser = pwhile >*>. parenthesise BTermParse .>*> pdo .>*>. curlysise stmntParser |>> While
     
-    let stmntParse = pstring "not implemented"
-    do sref := choice []
+    do sref := choice [DeclareParser; AssParser; SeqParser; ITEParser; WhileParser]
 
     (* The rest of your parser goes here *)
     type word   = (char * int) list
