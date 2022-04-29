@@ -181,8 +181,7 @@ module internal Eval
 
     type word = (char * int) list
     type squareFun = word -> int -> int -> Result<int, Error>
-
-    
+    type square = Map<int, squareFun>
     
     let stmntToSquareFun stmnt =
         fun w pos acc -> evalSM (mkState [("_pos_", pos); ("_acc_", acc)] w ["_result_"]) (stmntEval stmnt)

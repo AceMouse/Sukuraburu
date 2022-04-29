@@ -17,8 +17,6 @@ module internal Parser
     for successful parses although running times and error messages will differ. Please report any inconsistencies.
 
     *)
-
-    // open FParsecLight.TextParser     // Industrial parser-combinator library. Use for Scrabble Project.
     
     let pIntToChar  = pstring "intToChar"
     let pPointValue = pstring "pointValue"
@@ -129,9 +127,9 @@ module internal Parser
     do sref := choice [DeclareParser; AssParser; SeqParser; ITEParser; WhileParser]
 
     (* The rest of your parser goes here *)
-    type word   = (char * int) list
-    type squareFun = word -> int -> int -> Result<int, Error>
-    type square = Map<int, squareFun>
+    
+    let parseSquareProg _ = failwith "not implemented"
+    let parseBoardProg _ = failwith "not implemented"
     
     type boardFun2 = coord -> Result<square option, Error>
         
