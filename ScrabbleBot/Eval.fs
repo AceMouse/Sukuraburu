@@ -192,8 +192,14 @@ module internal Eval
 
     type boardFun = coord -> Result<squareFun option, Error> 
 
-    let stmntToBoardFun stmnt m = failwith "Not implemented"
-        
+    let stmntToBoardFun stmnt (m : Map<int,squareFun>) =
+        fun coord -> 
+            let x = stmntEval stmnt >>>= 
+                    lookup "_result_" |>
+                    evalSM (mkState [("_x_", fst coord); ("_y_", snd coord); ("_result_", 0)] [] ["_x_"; "_y_"; "_result_"])
+            match x with
+            | Success i -> Success (m.TryFind i)
+            | _ -> failwith "stmntToBoardFun failed."
 
     type board = {
         center        : coord
