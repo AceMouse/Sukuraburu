@@ -131,7 +131,14 @@ module internal Eval
                 (charEval c) >>= fun c ->
                 ret <| System.Char.IsDigit c
 
+    // Adding word lookups
+    let arithSingleLetterScore = PV (V "_pos_") .+. (V "_acc_")
+    let arithDoubleLetterScore = ((N 2) .*. PV (V "_pos_")) .+. (V "_acc_")
+    let arithTripleLetterScore = ((N 3) .*. PV (V "_pos_")) .+. (V "_acc_")
 
+    let arithDoubleWordScore = N 2 .*. V "_acc_"
+    let arithTripleWordScore = N 3 .*. V "_acc_"
+    
     type stm =                (* statements *)
     | Declare of string       (* variable declaration *)
     | Ass of string * aExp    (* variable assignment *)
@@ -175,14 +182,18 @@ module internal Eval
     type word = (char * int) list
     type squareFun = word -> int -> int -> Result<int, Error>
 
-    let stmntToSquareFun stm = failwith "Not implemented"
+    
+    
+    let stmntToSquareFun stmnt =
+        fun w pos acc -> evalSM (mkState [("_pos_", pos); ("_acc_", acc)] w ["_result_"]) (stmntEval stmnt)
 
 
     type coord = int * int
 
     type boardFun = coord -> Result<squareFun option, Error> 
 
-    let stmntToBoardFun stm m = failwith "Not implemented"
+    let stmntToBoardFun stmnt m = failwith "Not implemented"
+        
 
     type board = {
         center        : coord
