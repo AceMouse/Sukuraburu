@@ -128,7 +128,9 @@ module internal Parser
 
     (* The rest of your parser goes here *)
     
-    let parseSquareProg _ = failwith "not implemented"
+    let parseSquareProg (sqp : squareProg) : square =
+        Map.map (fun _ w -> stmntToSquareFun (getSuccess (run stmntParser w))) sqp
+
     let parseBoardProg _ = failwith "not implemented"
     
     type boardFun2 = coord -> Result<square option, Error>
@@ -138,5 +140,4 @@ module internal Parser
         defaultSquare : square
         squares       : boardFun2
     }
-    // Default (unusable) board in case you are not implementing a parser for the DSL.
     let mkBoard : boardProg -> board = fun _ -> {center = (0,0); defaultSquare = Map.empty; squares = fun _ -> Success (Some Map.empty)}

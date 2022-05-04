@@ -183,8 +183,8 @@ module internal Eval
     type squareFun = word -> int -> int -> Result<int, Error>
     type square = Map<int, squareFun>
     
-    let stmntToSquareFun stmnt =
-        fun w pos acc -> evalSM (mkState [("_pos_", pos); ("_acc_", acc)] w ["_result_"]) (stmntEval stmnt)
+    let stmntToSquareFun stmnt : squareFun =
+        fun w pos acc -> evalSM (mkState [("_pos_", pos); ("_acc_", acc)] w ["_result_"]) (stmntEval stmnt >>>= lookup "_result_")
 
 
     type coord = int * int
