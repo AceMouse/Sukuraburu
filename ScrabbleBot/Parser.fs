@@ -131,7 +131,8 @@ module internal Parser
     let parseSquareProg (sqp : squareProg) : square =
         Map.map (fun _ w -> stmntToSquareFun (getSuccess (run stmntParser w))) sqp
 
-    let parseBoardFun s (sqs : Map<int, square>): boardFun2 = failwith "not implemented"
+    let parseBoardFun s (sqs : Map<int, square>) : boardFun2 =
+        stmntToBoardFun (getSuccess (run stmntParser s)) (Map.map (fun x (y:square) -> y.Item x) sqs)
     
 
         
