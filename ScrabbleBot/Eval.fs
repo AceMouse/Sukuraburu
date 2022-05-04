@@ -189,9 +189,11 @@ module internal Eval
 
     type coord = int * int
 
-    type boardFun = coord -> Result<squareFun option, Error> 
+    type boardFun = coord -> Result<squareFun option, Error>
+    type boardFun2 = coord -> Result<square option, Error>
 
-    let stmntToBoardFun stmnt (m : Map<int,squareFun>) =
+
+    let stmntToBoardFun stmnt (m : Map<int,squareFun>) : boardFun =
         fun coord -> 
             let x = stmntEval stmnt >>>= 
                     lookup "_result_" |>
@@ -199,11 +201,3 @@ module internal Eval
             match x with
             | Success i -> Success (m.TryFind i)
             | _ -> failwith "stmntToBoardFun failed."
-
-    type board = {
-        center        : coord
-        defaultSquare : squareFun
-        squares       : boardFun
-    }
-
-    let mkBoard c defaultSq boardStmnt ids = failwith "Not implemented"

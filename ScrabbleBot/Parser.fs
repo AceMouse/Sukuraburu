@@ -124,20 +124,25 @@ module internal Parser
     let ITEParser = pif >*>. parenthesise BTermParse .>*> pthen .>*>. curlysise stmntParser .>*> pelse .>*>. curlysise stmntParser |>> fun ((b, st1), st2) -> ITE (b, st1, st2)
     let WhileParser = pwhile >*>. parenthesise BTermParse .>*> pdo .>*>. curlysise stmntParser |>> While
     
-    do sref := choice [DeclareParser; AssParser; SeqParser; ITEParser; WhileParser]
+    do sref.Value <- choice [DeclareParser; AssParser; SeqParser; ITEParser; WhileParser]
 
     (* The rest of your parser goes here *)
     
     let parseSquareProg (sqp : squareProg) : square =
         Map.map (fun _ w -> stmntToSquareFun (getSuccess (run stmntParser w))) sqp
 
-    let parseBoardProg _ = failwith "not implemented"
+    let parseBoardFun s (sqs : Map<int, square>): boardFun2 = failwith "not implemented"
     
-    type boardFun2 = coord -> Result<square option, Error>
+
         
     type board = {
         center        : coord
         defaultSquare : square
         squares       : boardFun2
     }
-    let mkBoard : boardProg -> board = fun _ -> {center = (0,0); defaultSquare = Map.empty; squares = fun _ -> Success (Some Map.empty)}
+    
+    let mkBoard (prog:boardProg) : board = {
+        center = prog.center
+        defaultSquare = parseSquareProg (Map.find prog.usedSquare prog.squares)
+        squares = fun _ -> Success (Some (parseBoardFun "" (parseSquareProg prog.squares) ))
+    }
