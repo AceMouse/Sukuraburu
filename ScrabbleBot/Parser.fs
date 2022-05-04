@@ -131,7 +131,7 @@ module internal Parser
     let parseSquareProg (sqp : squareProg) : square =
         Map.map (fun _ w -> stmntToSquareFun (getSuccess (run stmntParser w))) sqp
 
-    let parseBoardFun s (sqs : Map<int, square>) : boardFun2 =
+    let parseBoardProg s (sqs : Map<int, square>) : boardFun2 =
         stmntToBoardFun (getSuccess (run stmntParser s)) (Map.map (fun x (y:square) -> y.Item x) sqs)
     
 
@@ -145,5 +145,5 @@ module internal Parser
     let mkBoard (prog:boardProg) : board = {
         center = prog.center
         defaultSquare = parseSquareProg (Map.find prog.usedSquare prog.squares)
-        squares = fun _ -> Success (Some (parseBoardFun "" (parseSquareProg prog.squares) ))
+        squares = parseBoardProg prog.prog (Map.map (fun _ -> parseSquareProg) prog.squares)
     }
