@@ -1,5 +1,6 @@
 ﻿namespace Sukuraburu
 
+open System.Runtime.InteropServices.ComTypes
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication
 
@@ -49,9 +50,10 @@ module State =
         playerTurn    : uint32
         playerCount   : uint32
         forfeited     : uint32 list
+        points        : int
     }
 
-    let mkState b d pn h pt pc ff = {board = b; dict = d;  playerNumber = pn; hand = h; playerTurn = pt; playerCount = pc; forfeited = ff}
+    let mkState b d pn h pt pc ff p = {board = b; dict = d;  playerNumber = pn; hand = h; playerTurn = pt; playerCount = pc; forfeited = ff; points = p}
 
     let board st         = st.board
     let dict st          = st.dict
@@ -80,11 +82,32 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                let st' = st // This state needs to be updated
+                
+                let rec removeUsedPieces i hand=
+                    let id = fst(snd(move[i]))
+                    if (i < newPieces.Length-1) then
+                        removeUsedPieces (i+1) (MultiSet.removeSingle id hand)
+                    else
+                        (MultiSet.removeSingle id hand)
+                let rec addNewPieces i hand=
+                    let id, amount = newPieces[i]
+                    //System.Console.WriteLine (sprintf "id %d amount %d" id amount)
+                    if (i < newPieces.Length-1) then
+                        addNewPieces (i+1) (MultiSet.add id amount hand)
+                    else
+                        (MultiSet.add id amount hand)
+                
+                //System.Console.WriteLine "----------"
+                //System.Console.WriteLine "before"
+                //System.Console.WriteLine st.hand
+                let st' = {st with playerTurn = (st.playerTurn+1u)%st.playerCount; hand = addNewPieces 0 (removeUsedPieces 0 st.hand); points = st.points + points}  // This state needs to be updated
+                //System.Console.WriteLine "after"
+                //System.Console.WriteLine st'.hand
+                //System.Console.WriteLine "----------"
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = st // This state needs to be updated
+                let st' = {st with playerTurn = (st.playerTurn+1u)%st.playerCount}  // This state needs to be updated
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
@@ -121,5 +144,5 @@ module Scrabble =
                   
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
 
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet playerTurn numPlayers list.Empty)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet playerTurn numPlayers list.Empty 0)
         
