@@ -131,11 +131,8 @@ module internal Parser
     let parseSquareProg (sqp : squareProg) : square =
         Map.map (fun _ w -> stmntToSquareFun (getSuccess (run stmntParser w))) sqp
 
-    let parseBoardProg s (sqs : Map<int, square>) : boardFun2 =
-        printf "%A" sqs.Keys
-        printf "%A" (Map.map (fun x (y:squareFun) -> y) (sqs.Values |> Seq.item 0))
-        printf "%A" (Map.map (fun x (y:square) -> y.Item x) sqs)
-        stmntToBoardFun (getSuccess (run stmntParser s)) (Map.map (fun x (y:square) -> y.Item x) sqs)
+    let parseBoardProg prog (sqs : Map<int, square>) : boardFun2 =
+         stmntToBoardFun (getSuccess (run stmntParser prog)) sqs
     
     type board = {
         center        : coord
