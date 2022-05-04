@@ -189,15 +189,16 @@ module internal Eval
 
     type coord = int * int
 
-    type boardFun = coord -> Result<squareFun option, Error> 
+    type boardFun = coord -> Result<squareFun option, Error>
+    type boardFun2 = coord -> Result<square option, Error>
 
-    let stmntToBoardFun stmnt (m : Map<int,squareFun>) =
+    let stmntToBoardFun stmnt (m : Map<int,squareFun>) : boardFun2 =
         fun coord -> 
             let x = stmntEval stmnt >>>= 
                     lookup "_result_" |>
                     evalSM (mkState [("_x_", fst coord); ("_y_", snd coord); ("_result_", 0)] [] ["_x_"; "_y_"; "_result_"])
             match x with
-            | Success i -> Success (m.TryFind i)
+            | Success i -> Success (Some (Map.empty.Add (i, (m.TryFind i).Value)))
             | _ -> failwith "stmntToBoardFun failed."
 
     type board = {
