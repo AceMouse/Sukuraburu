@@ -119,7 +119,7 @@ module internal Parser
     let stmntParser, sref = createParserForwardedToRef<stm>()
     
     let DeclareParser = pdeclare >>. spaces1 >>. many pletter |>> fun clst -> clst |> List.toArray |> string |> Declare
-    let AssParser = many pletter .>*> pstring ":=" .>*>. TermParse |>> fun (v,a) -> Ass ((v |> List.toArray |> string), a)
+    let AssParser = pid .>*> pstring ":=" .>*>. TermParse |>> Ass
     let SeqParser = stmntParser .>*> pchar ';' .>*>. stmntParser |>> Seq
     let ITEParser = pif >*>. parenthesise BTermParse .>*> pthen .>*>. curlysise stmntParser .>*> pelse .>*>. curlysise stmntParser |>> fun ((b, st1), st2) -> ITE (b, st1, st2)
     let WhileParser = pwhile >*>. parenthesise BTermParse .>*> pdo .>*>. curlysise stmntParser |>> While
@@ -132,10 +132,11 @@ module internal Parser
         Map.map (fun _ w -> stmntToSquareFun (getSuccess (run stmntParser w))) sqp
 
     let parseBoardProg s (sqs : Map<int, square>) : boardFun2 =
+        printf "%A" sqs.Keys
+        printf "%A" (Map.map (fun x (y:squareFun) -> y) (sqs.Values |> Seq.item 0))
+        printf "%A" (Map.map (fun x (y:square) -> y.Item x) sqs)
         stmntToBoardFun (getSuccess (run stmntParser s)) (Map.map (fun x (y:square) -> y.Item x) sqs)
     
-
-        
     type board = {
         center        : coord
         defaultSquare : square
@@ -147,3 +148,5 @@ module internal Parser
         defaultSquare = parseSquareProg (Map.find prog.usedSquare prog.squares)
         squares = parseBoardProg prog.prog (Map.map (fun _ -> parseSquareProg) prog.squares)
     }
+
+    //let mkBoard : boardProg -> board = fun _ -> {center = (0,0); defaultSquare = Map.empty; squares = fun _ -> Success (Some Map.empty)}

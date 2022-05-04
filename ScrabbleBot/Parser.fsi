@@ -5,10 +5,7 @@ module internal Parser
     open ScrabbleUtil
     open StateMonad
     open Eval
-    
-    
-    type boardFun2 = coord -> Result<square option, Error>
-        
+            
     type board = {
         center        : coord
         defaultSquare : square
