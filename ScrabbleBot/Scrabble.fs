@@ -106,9 +106,9 @@ module Scrabble =
                         //forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
                         //let input =  System.Console.ReadLine()
                         //let move = RegEx.parseMove input
-                        forcePrint "calculating..."
+                        forcePrint "calculating... "
                         let move = BestMove.suggestMove st.board st.placedTiles st.dict (MultiSet.toList st.hand pieces)
-                        forcePrint "done!"
+                        forcePrint (sprintf "done!\n found move %A" move)
                         debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                         send cstream (SMPlay move)
                         

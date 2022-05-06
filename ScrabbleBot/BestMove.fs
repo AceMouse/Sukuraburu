@@ -1,72 +1,107 @@
 module internal BestMove
 
+    open System.ComponentModel
     open MultiSet
     open ScrabbleUtil
 
     let startingSquares (placedTiles : Map<(int*int), uint32*(char*int)>) =
-        let rec aux (lst: (((int*int)*(uint32*(char*int))) list)) m offset =
+        let rec aux (map: (Map<(int*int),(uint32*(char*int))>)) m offset =
+            let lst = Map.toList map
             match lst with
             | [] -> m
-            | ((x,y),_)::l -> 
-                aux l (Set.add (x, (y+offset))(Set.add ((x+offset), y) m)) offset
-        Set.toList (aux (Map.toList placedTiles) (aux (Map.toList placedTiles) (aux (Map.toList placedTiles) (aux (Map.toList placedTiles) (aux (Map.toList placedTiles) (aux (Map.toList placedTiles) (aux (Map.toList placedTiles) (aux (Map.toList placedTiles) (aux (Map.toList placedTiles) (aux (Map.toList placedTiles) Set.empty 0) 1) -1) -2) -3) -4) -5) -6) -7) -8)
+            | ((x,y),_)::_ -> 
+                aux (map.Remove ((x,y))) (Set.add (x, (y+offset))(Set.add ((x+offset), y) m)) offset
+        Set.toList (aux placedTiles (aux placedTiles (aux placedTiles Set.empty -1) 1) 0)
+        (*Set.toList (
+            aux (Map.toList placedTiles) (
+                aux (Map.toList placedTiles) (
+                    aux (Map.toList placedTiles) (
+                        aux (Map.toList placedTiles) (
+                            aux (Map.toList placedTiles) (
+                                aux (Map.toList placedTiles) (
+                                    aux (Map.toList placedTiles) (
+                                        aux (Map.toList placedTiles) (
+                                            aux (Map.toList placedTiles) (
+                                                aux (Map.toList placedTiles
+                                            ) Set.empty 0
+                                        ) 1
+                                    ) -1
+                                ) -2
+                            ) -3
+                        ) -4
+                    ) -5
+                ) -6
+            ) -7
+        ) -8)*)
         
     
-    let processDir coord (placedTiles : Map<(int*int), (uint32*(char*int))>) (dict : Dictionary.Dict) (hand : (uint32*Set<(char*int)>) list) d r : (string*int)=
-        if placedTiles.ContainsKey (((fst coord)-1), snd coord) then ("",-1000)
+    let processDir coord (placedTiles : Map<(int*int), (uint32*(char*int))>) (dict : Dictionary.Dict) (hand : (uint32*Set<(char*int)>) list) d r : ((((int*int)*(uint32*(char*int))) list)*int)=
+        if placedTiles.ContainsKey (((fst coord)-1), snd coord) then ([],-1000)
         else
             let used = 0uy
-            let rec aux curAcc (lastWordAcc:int) coord (hand : (uint32*Set<(char*int)>) list) (u:byte) i (dict : Dictionary.Dict): (bool*(string*int)) =
-                if (((u &&& (1uy<<<i)) = 0uy) && (i < hand.Length)) then
-                    let setList = hand[i] |> snd |> Set.toList
-                    let toExplore = List.init setList.Length (fun i -> ((fst hand[i]),setList[i]))
-                    let rec explore j =
-                        let tile = (Option.defaultValue (toExplore[j]) (placedTiles.TryFind coord))
-                        let ch = tile |> snd |> fst
-                        let pts = tile |> snd |> snd
-                        let n = (Dictionary.step ch) dict
-                        match n with
-                        | None ->
-                            let ret = (false,("",lastWordAcc)):: if j < toExplore.Length-1 then explore (j+1) else List.empty
-                            ret
-                        | Some (b, dict) ->
-                            let ret = List.maxBy snd [(aux (curAcc+pts) (if b then curAcc + pts else lastWordAcc) (coord |> fst |> (+)d, coord |> snd |> (+)r) hand (u ||| (1uy<<<i)) 0 dict); (aux curAcc lastWordAcc coord hand u (i+1) dict)]
-                            let add = (b || (ret|>fst))
-                            let s = ret |> snd |> fst 
-                            let p = ret |> snd |> snd
-                            (add,((if add then (ch|>string) + s else s), p)):: if j < toExplore.Length-1 then explore (j+1) else List.empty
+            let rec aux acc coord (hand : (uint32*Set<(char*int)>) list) (u:byte) (dict : Dictionary.Dict): (bool*((((int*int)*(uint32*(char*int))) list)*int)) =
+                let rec tilesToExplore lst i = 
+                    if (((u &&& (1uy<<<i)) = 0uy) && (i < hand.Length)) then
+                        let setList = hand[i] |> snd |> Set.toList
+                        let l = List.init setList.Length (fun j -> (i,((fst hand[i]),setList[j]))) @ lst
+                        tilesToExplore l (i+1)
+                    else if (i < hand.Length) then
+                        tilesToExplore lst (i+1)
+                    else
+                        lst
+                let toExplore = tilesToExplore [] 0
+                let rec explore j =
+                    let idx, defTile = toExplore[j]
+                    let tile = (Option.defaultValue (defTile) (placedTiles.TryFind coord))
+                    let placed = placedTiles.ContainsKey coord
+                    let id,(ch,pts) = tile
+                    let n = (Dictionary.step ch) dict
+                    match n with
+                    | None ->
+                        let ret = (false,([],0)):: if j < toExplore.Length-1 then explore (j+1) else List.empty
+                        ret
+                    | Some (b, dict) ->
+                        let x,y = coord
+                        let nc = (x+d, y+r)
+                        let ret = (aux (acc + pts) nc hand (if placed then u else (u ||| (1uy<<<idx))) dict)
+                        let add = (b || (ret|>fst))
+                        let s = ret |> snd |> fst 
+                        let p = ret |> snd |> snd
+                        let ret = (add,((if add && not placed then ((x,y),((id,(ch,pts))))::s else s), (if add then p + pts else p))):: if j < toExplore.Length-1 then explore (j+1) else List.empty
+                        ret
+                    
+                List.maxBy snd (explore 0)
                         
-                    List.maxBy snd (explore 0)
-                        
-                else
-                    (false,("",lastWordAcc))
-            (aux 0 0 coord hand used 0 dict) |> snd
+            let ret = (aux 0 coord hand used dict) |> snd
+            ret 
     
-    let processD coord (placedTiles : Map<(int*int), (uint32*(char*int))>) (dict : Dictionary.Dict) (hand : (uint32*Set<(char*int)>) list) : (string*int)*bool=
-        (processDir coord placedTiles dict hand 1 0,true)
-    let processR coord (placedTiles : Map<(int*int), (uint32*(char*int))>) (dict : Dictionary.Dict) (hand : (uint32*Set<(char*int)>) list) : (string*int)*bool=
-        (processDir coord placedTiles dict hand 0 1,false)
+    let processD coord (placedTiles : Map<(int*int), (uint32*(char*int))>) (dict : Dictionary.Dict) (hand : (uint32*Set<(char*int)>) list) : (((((int*int)*(uint32*(char*int)))) list)*int)=
+        let ret = (processDir coord placedTiles dict hand 1 0)
+        ret
+    let processR coord (placedTiles : Map<(int*int), (uint32*(char*int))>) (dict : Dictionary.Dict) (hand : (uint32*Set<(char*int)>) list) : (((((int*int)*(uint32*(char*int)))) list)*int)=
+        let ret = (processDir coord placedTiles dict hand 0 1)
+        ret
             
-    let rec bestSquareToMove (bestSquare:(int*int)*((string*int)*bool)) : ((int*int)*(uint32*(char*int))) list =
-        let chars = bestSquare |> snd |> fst |> fst |> Seq.toList
+    let rec bestSquareToMove (bestSquare:(int*int)*((((uint32*(char*int)) list)*int)*bool)) : ((int*int)*(uint32*(char*int))) list =
+        let tiles = bestSquare |> snd |> fst |> fst
         let start = bestSquare |> fst
         let dir = bestSquare |> snd |> snd
         //let pts = (bestSquare |> snd |> fst |> snd)
-        let coords = List.init chars.Length (fun i -> ( start |> fst |> (+) (if dir then i else 0), start |> snd |> (+) (if not dir then i else 0) ) )
-        let lst = List.init chars.Length (fun i -> (coords[i], (((((chars[i]|> int)-('a'|> int))+1) |> uint32),(chars[i],0))))
+        let coords = List.init tiles.Length (fun i -> ( start |> fst |> (+) (if dir then i else 0), start |> snd |> (+) (if not dir then i else 0) ) )
+        let lst = List.init tiles.Length (fun i -> (coords[i],tiles[i])) 
         lst
         
     let suggestMove (board : Parser.board) (placedTiles : Map<(int*int), (uint32*(char*int))>) (dict : Dictionary.Dict) (hand : (uint32*Set<(char*int)>) list) =
         let rec aux startingSquares =
             match startingSquares with
-            | c::l -> (c,(List.maxBy (fun t -> t |> fst |> snd) [(processD c placedTiles dict hand); (processR c placedTiles dict hand)]))::(aux l)
+            | c::l -> (List.maxBy (fun t -> t |> snd) [(processD c placedTiles dict hand); (processR c placedTiles dict hand)])::(aux l)
             | [] -> []
         // (coord, ((longestWord, length), dir))
-        // dir : Down = true, Right = false 
-         
-        let bestSquare = (Seq.maxBy snd (aux (if placedTiles.IsEmpty then ([board.center]) else (startingSquares placedTiles))))
-        
-        bestSquareToMove bestSquare
+        // dir : Down = true, Right = false
+        let ssquares = if placedTiles.IsEmpty then ([board.center]) else (startingSquares placedTiles) 
+        let lst = (aux (ssquares))
+        let bestSquare = (Seq.maxBy snd lst)
+        bestSquare |> fst
         
         
         
