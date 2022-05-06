@@ -1,9 +1,9 @@
 ﻿namespace Sukuraburu
 
 open System.Runtime.InteropServices.ComTypes
+open Dictionary
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication
-
 open System.IO
 
 open ScrabbleUtil.DebugPrint
@@ -55,7 +55,7 @@ module State =
 
     type state = {
         board         : Parser.board
-        dict          : ScrabbleUtil.Dictionary.Dict
+        dict          : Dict
         playerNumber  : uint32
         hand          : MultiSet.MultiSet<uint32>
         playerTurn    : uint32

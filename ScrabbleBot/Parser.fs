@@ -4,10 +4,7 @@
 // Insert your Parser.fs file here from Assignment 7. All modules must be internal.
 
 module internal Parser
-
-    open StateMonad
     open ScrabbleUtil // NEW. KEEP THIS LINE.
-    open System
     open Eval
     open FParsecLight.TextParser     // Industrial parser-combinator library. Use for Scrabble Project.
 
@@ -67,12 +64,12 @@ module internal Parser
 
     let AddParse = binop (pchar '+') ProdParse TermParse |>> Add <?> "Add"
     let SubParse = binop (pchar '-') ProdParse TermParse |>> Sub <?> "Sub"
-    do tref := choice [AddParse; SubParse; ProdParse]
+    do tref.Value <- choice [AddParse; SubParse; ProdParse]
 
     let MulParse = binop (pchar '*') AtomParse ProdParse |>> Mul <?> "Mul"
     let DivParse = binop (pchar '/') AtomParse ProdParse |>> Div <?> "Div"
     let ModParse = binop (pchar '%') AtomParse ProdParse |>> Mod <?> "Mod"
-    do pref := choice [MulParse; DivParse; ModParse; AtomParse]
+    do pref.Value <- choice [MulParse; DivParse; ModParse; AtomParse]
     let CharParse, cref = createParserForwardedToRef<cExp>()
     let NParse   = pint32 |>> N <?> "Int"
     let ParParse = parenthesise TermParse <?> "Par"
@@ -80,7 +77,7 @@ module internal Parser
     let PVParse = pPointValue >*>. parenthesise TermParse |>> PV <?> "PV"
     let VParse = pid |>> V <?> "Pid"
     let CTIParser = pCharToInt >*>. parenthesise CharParse |>> CharToInt <?> "CharToInt"
-    do aref := choice [CTIParser; NegParse; ParParse; PVParse; VParse; NParse; ]
+    do aref.Value <- choice [CTIParser; NegParse; ParParse; PVParse; VParse; NParse; ]
 
     let AexpParse = TermParse 
     
@@ -93,7 +90,7 @@ module internal Parser
     
     let ITCParser = pIntToChar >*>. parenthesise TermParse |>> IntToChar <?> "IntToChar"
     let CVParser = pCharValue >*>. parenthesise TermParse |>> CV <?> "CV"
-    do cref := choice [TLoParser; TUpParser; ITCParser; CVParser; ChaParser]
+    do cref.Value <- choice [TLoParser; TUpParser; ITCParser; CVParser; ChaParser]
     let CexpParse = CharParse
     
     let BTermParse, btref = createParserForwardedToRef<bExp>()
@@ -112,9 +109,9 @@ module internal Parser
     let NegParser = pchar '~' >*>. BTermParse |>> Not <?> "Not"
     let IsLetter = pIsLetter >*>. parenthesise CharParse |>> IsLetter <?> "IsLetter"
     let IsDigit = pIsDigit >*>. parenthesise CharParse |>> IsDigit <?> "IsDigit"
-    do baref := choice [NegParser; IsDigit; IsLetter; TruParser; FlsParser]
-    do bpref := choice [AEqParser; ANEqParser; AGEqParser; ALEqParser; AGTParser; ALTParser; BAtomParse]
-    do btref := choice [AndParser; OrParser; BProdParse]
+    do baref.Value <- choice [NegParser; IsDigit; IsLetter; TruParser; FlsParser]
+    do bpref.Value <- choice [AEqParser; ANEqParser; AGEqParser; ALEqParser; AGTParser; ALTParser; BAtomParse]
+    do btref.Value <- choice [AndParser; OrParser; BProdParse]
 
     let stmntParser, sref = createParserForwardedToRef<stm>()
     
@@ -145,5 +142,4 @@ module internal Parser
         defaultSquare = parseSquareProg (Map.find prog.usedSquare prog.squares)
         squares = parseBoardProg prog.prog (Map.map (fun _ -> parseSquareProg) prog.squares)
     }
-
-    //let mkBoard : boardProg -> board = fun _ -> {center = (0,0); defaultSquare = Map.empty; squares = fun _ -> Success (Some Map.empty)}
+    
