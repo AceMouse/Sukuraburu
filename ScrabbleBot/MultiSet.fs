@@ -29,4 +29,11 @@ module internal MultiSet
     let fold (f : 'a -> 'b -> uint32 -> 'a) acc (set: MultiSet<'b>) : 'a = Map.fold f acc set.map
 
     let foldBack (f: 'a -> uint32 -> 'b -> 'b) (set : MultiSet<'a>) (acc : 'b) : 'b = Map.foldBack f set.map acc
+    
+    let toList (set : MultiSet<'a>) =
+        let rec aux lst =
+            match lst with
+            | [] -> list.Empty
+            | (x,y)::l -> List.init (y |> int) (fun _ -> x) :: aux l
+        aux (Map.toList (Map.filter (fun _ v -> not (v = 0u)) set.map))
         
