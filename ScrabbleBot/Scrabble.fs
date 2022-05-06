@@ -1,7 +1,6 @@
 ﻿namespace Sukuraburu
 
 open System.Runtime.InteropServices.ComTypes
-open Dictionary
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication
 open System.IO
@@ -55,7 +54,7 @@ module State =
 
     type state = {
         board         : Parser.board
-        dict          : Dict
+        dict          : Dictionary.Dict
         playerNumber  : uint32
         hand          : MultiSet.MultiSet<uint32>
         playerTurn    : uint32
@@ -195,7 +194,7 @@ module Scrabble =
 
     let startGame 
             (boardP : boardProg) 
-            (dictf : bool -> Dict) 
+            (dictf : bool -> Dictionary.Dict) 
             (numPlayers : uint32) 
             (playerNumber : uint32) 
             (playerTurn  : uint32) 
