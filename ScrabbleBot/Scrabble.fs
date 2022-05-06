@@ -1,6 +1,7 @@
 ﻿namespace Sukuraburu
 
 open System.Runtime.InteropServices.ComTypes
+open Parser
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication
 open System.IO
@@ -61,8 +62,7 @@ module State =
         playerCount   : uint32
         notForfeited  : bool list
         points        : int list
-        
-        placedTiles   : Map<(int * int),(char*int)>
+        placedTiles   : Map<(int * int),(uint32*(char*int))>
     }
 
     let mkState b d pn h pt pc nff p ptl = {board = b; dict = d;  playerNumber = pn; hand = h; playerTurn = pt; playerCount = pc; notForfeited = nff; points = p; placedTiles = ptl}
@@ -103,10 +103,12 @@ module Scrabble =
                         (None, None)
                     | _ ->
                         
-                        forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
-                        let input =  System.Console.ReadLine()
-                        let move = RegEx.parseMove input
-                        
+                        //forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
+                        //let input =  System.Console.ReadLine()
+                        //let move = RegEx.parseMove input
+                        forcePrint "calculating..."
+                        let move = BestMove.suggestMove st.board st.placedTiles st.dict (MultiSet.toList st.hand pieces)
+                        forcePrint "done!"
                         debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                         send cstream (SMPlay move)
                         
@@ -137,11 +139,11 @@ module Scrabble =
                 let playerOrder = List.append (st.notForfeited[(((curPlayer |> int)+1)%(st.playerCount|>int))..]) (st.notForfeited[..(curPlayer |> int)])
                 (curPlayer + ((List.findIndex id playerOrder) |> uint32))%st.playerCount
                 
-            let rec placeTiles placedTiles tiles : Map<(int*int),(char*int)>=
-                if List.isEmpty tiles then
-                    placedTiles
-                else
-                    placeTiles (Map.add (fst tiles.Head) (snd(snd tiles.Head)) placedTiles) tiles.Tail 
+            let rec placeTiles placedTiles (tiles:((int*int)*(uint32*(char*int))) list) : Map<(int*int),(uint32*(char*int))>=
+                match tiles with
+                | [] -> placedTiles
+                | (k,v)::l -> Map.add k v (placeTiles placedTiles l)
+            
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
@@ -150,6 +152,7 @@ module Scrabble =
                 System.Console.WriteLine st.hand
                 let reducedHand = removePieces 0 st.hand (List.map (fun x -> x |> snd |> fst) ms)
                 let newHand = addPieces 0 (reducedHand) newPieces
+                
                 let st' = {st with playerTurn = nextPlayer st st.playerNumber; hand = newHand; points = List.mapi (fun i v -> if i = (st.playerNumber |> int) then v + points else v) st.points; placedTiles = placeTiles st.placedTiles ms}  // This state needs to be updated
                 System.Console.WriteLine "after"
                 System.Console.WriteLine st'.hand
