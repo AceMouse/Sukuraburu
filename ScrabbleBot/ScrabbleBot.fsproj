@@ -18,8 +18,6 @@
   <ItemGroup>
     <Compile Include="Dict.fsi" />
     <Compile Include="Dict.fs" />
-    <Compile Include="BestMove.fs" />
-    <Compile Include="BestMove.fsi" />
     <Compile Include="MultiSet.fsi" />
     <Compile Include="MultiSet.fs" />
     <Compile Include="FParsecLight.fsi" />
@@ -29,6 +27,8 @@
     <Compile Include="Eval.fs" />
     <Compile Include="Parser.fsi" />
     <Compile Include="Parser.fs" />
+    <Compile Include="BestMove.fsi" />
+    <Compile Include="BestMove.fs" />
     <Compile Include="Scrabble.fsi" />
     <Compile Include="Scrabble.fs" />
   </ItemGroup>
