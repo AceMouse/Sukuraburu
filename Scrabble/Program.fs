@@ -4,6 +4,7 @@
 open System
 open System.Collections.Generic
 open System.IO
+open Dictionary
 let time f =
     let start = System.DateTime.Now
     let res = f ()
@@ -55,7 +56,7 @@ let main argv =
 
     // Uncomment this line to call your client
     let (dictionary, time) =
-        time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
+        time (fun () -> Dict words dictAPI)
     
     let players    = [("Sukuraburu", dictionary, Sukuraburu.Scrabble.startGame)]
 

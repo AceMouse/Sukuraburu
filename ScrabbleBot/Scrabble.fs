@@ -7,7 +7,7 @@ open ScrabbleUtil.ServerCommunication
 open System.IO
 
 open ScrabbleUtil.DebugPrint
-
+open StateMonad
 // The RegEx module is only used to parse human input. It is not used for the final product.
 
 module RegEx =
@@ -62,9 +62,11 @@ module State =
         playerCount   : uint32
         notForfeited  : bool list
         points        : int list
+        
+        placedTiles   : Map<(int * int),(char*int)>
     }
 
-    let mkState b d pn h pt pc nff p = {board = b; dict = d;  playerNumber = pn; hand = h; playerTurn = pt; playerCount = pc; notForfeited = nff; points = p}
+    let mkState b d pn h pt pc nff p ptl = {board = b; dict = d;  playerNumber = pn; hand = h; playerTurn = pt; playerCount = pc; notForfeited = nff; points = p; placedTiles = ptl}
 
     let board st         = st.board
     let dict st          = st.dict
@@ -78,39 +80,41 @@ module Scrabble =
 
         let rec aux (st : State.state) =
             let move, change =
-                if st.playerNumber = st.playerTurn then
+                //if st.playerNumber = st.playerTurn then
                     Print.printHand pieces (State.hand st)
-                    forcePrint "Move or Change or Forfeit or Pass?(m|c|f|p)"
+                    System.Console.WriteLine st.hand
+                    System.Console.WriteLine "Move or Change or Forfeit or Pass?(m|c|f|p)\n\n"
                     let action = System.Console.ReadLine()[0]
                     // remove the force print when you move on from manual input (or when you have learnt the format)
                     match action with
-                            | 'm' ->
-                                forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
-                                let input =  System.Console.ReadLine()
-                                let move = RegEx.parseMove input
-                                
-                                debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-                                send cstream (SMPlay move)
-                                
-                                debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-                                (Some(move), None)
-                            | 'c' ->
-                                forcePrint "Input change (format '(<id> )*')\n\n"
-                                let input =  System.Console.ReadLine()
-                                let change = RegEx.parseChange input
-                                send cstream (SMChange change)
-                                debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) change) // keep the debug lines. They are useful.
-                                (None, Some(change))
-                            | 'f' ->
-                                forcePrint "Forfeited!\n\n"
-                                send cstream SMForfeit
-                                (None, None)
-                            | 'p' ->
-                                forcePrint "Passed!\n\n"
-                                send cstream SMPass
-                                (None, None)
-                else
-                    (None, None)
+                    | 'c' ->
+                        forcePrint "Input change (format '(<id> )*')\n\n"
+                        let input =  System.Console.ReadLine()
+                        let change = RegEx.parseChange input
+                        send cstream (SMChange change)
+                        debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) change) // keep the debug lines. They are useful.
+                        (None, Some(change))
+                    | 'f' ->
+                        forcePrint "Forfeited!\n\n"
+                        send cstream SMForfeit
+                        (None, None)
+                    | 'p' ->
+                        forcePrint "Passed!\n\n"
+                        send cstream SMPass
+                        (None, None)
+                    | _ ->
+                        
+                        forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
+                        let input =  System.Console.ReadLine()
+                        let move = RegEx.parseMove input
+                        
+                        debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+                        send cstream (SMPlay move)
+                        
+                        debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+                        (Some(move), None)    
+                //else
+                    //(None, None)
                     
             let msg = recv cstream
                         
@@ -134,6 +138,11 @@ module Scrabble =
                 let playerOrder = List.append (st.notForfeited[(((curPlayer |> int)+1)%(st.playerCount|>int))..]) (st.notForfeited[..(curPlayer |> int)])
                 (curPlayer + ((List.findIndex id playerOrder) |> uint32))%st.playerCount
                 
+            let rec placeTiles placedTiles tiles : Map<(int*int),(char*int)>=
+                if List.isEmpty tiles then
+                    placedTiles
+                else
+                    placeTiles (Map.add (fst tiles.Head) (snd(snd tiles.Head)) placedTiles) tiles.Tail 
             match msg with
             | RCM (CMPlaySuccess(ms, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
@@ -142,14 +151,14 @@ module Scrabble =
                 System.Console.WriteLine st.hand
                 let reducedHand = removePieces 0 st.hand (List.map (fun x -> x |> snd |> fst) ms)
                 let newHand = addPieces 0 (reducedHand) newPieces
-                let st' = {st with playerTurn = nextPlayer st st.playerNumber; hand = newHand; points = List.mapi (fun i v -> if i = (st.playerNumber |> int) then v + points else v) st.points}  // This state needs to be updated
+                let st' = {st with playerTurn = nextPlayer st st.playerNumber; hand = newHand; points = List.mapi (fun i v -> if i = (st.playerNumber |> int) then v + points else v) st.points; placedTiles = placeTiles st.placedTiles ms}  // This state needs to be updated
                 System.Console.WriteLine "after"
                 System.Console.WriteLine st'.hand
                 System.Console.WriteLine "----------"
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = {st with playerTurn = nextPlayer st pid; points = List.mapi (fun i v -> if i = (pid |> int) then v + points else v) st.points}  // This state needs to be updated
+                let st' = {st with playerTurn = nextPlayer st pid; points = List.mapi (fun i v -> if i = (pid |> int) then v + points else v) st.points; placedTiles = placeTiles st.placedTiles ms}  // This state needs to be updated
                 aux st'
             | RCM (CMPassed pid) ->
                 let st' = {st with playerTurn = nextPlayer st pid}  // This state needs to be updated
@@ -186,7 +195,7 @@ module Scrabble =
 
     let startGame 
             (boardP : boardProg) 
-            (dictf : bool -> Dictionary.Dict) 
+            (dictf : bool -> Dict) 
             (numPlayers : uint32) 
             (playerNumber : uint32) 
             (playerTurn  : uint32) 
@@ -205,8 +214,24 @@ module Scrabble =
         //let dict = dictf true // Uncomment if using a gaddag for your dictionary
         let dict = dictf false // Uncomment if using a trie for your dictionary
         let board = Parser.mkBoard boardP
-                  
+        let printSquare coord = 
+            let tt = board.squares coord
+            match tt with
+            | Success squareOption ->
+                System.Console.WriteLine (sprintf "%d,%d = %A"(fst coord)(snd coord) ( squareOption))
+            | Failure error -> System.Console.WriteLine error
+            
+        let rec aux r =
+            let rec aux2 c =
+                printSquare (r,c)
+                if (c < 7) then
+                    aux2 (c+1) 
+            aux2 -7
+            if (r < 7) then
+                aux (r+1)
+                
+        aux -7
+        
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
-
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet playerTurn numPlayers (List.init (numPlayers |> int) (fun _ -> true)) (List.ofArray (Array.zeroCreate (numPlayers |> int))))
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet playerTurn numPlayers (List.init (numPlayers |> int) (fun _ -> true)) (List.ofArray (Array.zeroCreate (numPlayers |> int))) Map.empty)
         
