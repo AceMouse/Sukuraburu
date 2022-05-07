@@ -10,7 +10,9 @@ module internal BestMove
             match lst with
             | [] -> m
             | ((x,y),_)::_ -> 
-                aux (map.Remove ((x,y))) (Set.add (x, (y+offset))(Set.add ((x+offset), y) m)) offset
+                aux (map.Remove ((x,y))) (
+                    Set.add (x, (y+offset)) (Set.add ((x+offset), y) m
+                )) offset
         Set.toList (aux placedTiles (aux placedTiles (aux placedTiles Set.empty -1) 1) 0)
         (*Set.toList (
             aux (Map.toList placedTiles) (

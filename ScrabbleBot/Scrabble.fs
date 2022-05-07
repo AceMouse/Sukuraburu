@@ -73,12 +73,10 @@ module State =
     let hand st          = st.hand
 
 module Scrabble =
-    open System.Threading
-
     let playGame cstream pieces (st : State.state) =
-
+        
         let rec aux (st : State.state) =
-            let move, change =
+            let move, change = 
                 //if st.playerNumber = st.playerTurn then
                     Print.printHand pieces (State.hand st)
                     System.Console.WriteLine st.hand
@@ -116,20 +114,23 @@ module Scrabble =
                         (Some(move), None)    
                 //else
                     //(None, None)
-                    
+                
             let msg = recv cstream
                         
+                        
             
-            let rec removePieces i hand (ids : uint32 list) =
-                let id = ids[i]
-                if (i < ids.Length-1) then
-                    removePieces (i+1) (MultiSet.removeSingle id hand) ids
-                else
-                    (MultiSet.removeSingle id hand)
+            // Remove pieces with matching ids from the hand
+            let removePieces hand (ids : uint32 list) =
+                let rec aux i h : MultiSet.MultiSet<uint32> =
+                    let id = ids[i]
+                    if (i < ids.Length-1) then
+                        aux (i+1) (MultiSet.removeSingle id h)
+                    else
+                        (MultiSet.removeSingle id hand)
+                aux 0 hand
                     
-            let rec addPieces i hand (pieces : (uint32* uint32)List)=
+            let rec addPieces i hand (pieces : (uint32 * uint32) list)=
                 let id, amount = pieces[i]
-                //System.Console.WriteLine (sprintf "id %d amount %d" id amount)
                 if (i < pieces.Length-1) then
                     addPieces (i+1) (MultiSet.add id amount hand) pieces
                 else
@@ -144,16 +145,26 @@ module Scrabble =
                 | [] -> placedTiles
                 | (k,v)::l -> Map.add k v (placeTiles placedTiles l)
             
+            
+            
+            
+            
             match msg with
-            | RCM (CMPlaySuccess(ms, points, newPieces)) ->
+            | RCM (CMPlaySuccess(move, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                System.Console.WriteLine "----------"
+                System.Console.WriteLine "\n----------"
                 System.Console.WriteLine "before"
                 System.Console.WriteLine st.hand
-                let reducedHand = removePieces 0 st.hand (List.map (fun x -> x |> snd |> fst) ms)
+                //                                     | Maps a function that will return the ids of the moved pieces
+                let reducedHand = removePieces st.hand (List.map (fun (_, x) -> fst x) move)
                 let newHand = addPieces 0 (reducedHand) newPieces
                 
-                let st' = {st with playerTurn = nextPlayer st st.playerNumber; hand = newHand; points = List.mapi (fun i v -> if i = (st.playerNumber |> int) then v + points else v) st.points; placedTiles = placeTiles st.placedTiles ms}  // This state needs to be updated
+                // Update state
+                let st' = {st with
+                               playerTurn = nextPlayer st st.playerNumber
+                               hand = newHand
+                               points = List.mapi (fun i v -> if i = (st.playerNumber |> int) then v + points else v) st.points
+                               placedTiles = placeTiles st.placedTiles move}  // This state needs to be updated
                 System.Console.WriteLine "after"
                 System.Console.WriteLine st'.hand
                 System.Console.WriteLine "----------"
@@ -172,7 +183,7 @@ module Scrabble =
                 System.Console.WriteLine "----------"
                 System.Console.WriteLine "before"
                 System.Console.WriteLine st.hand
-                let reducedHand = removePieces 0 st.hand change.Value
+                let reducedHand = removePieces st.hand change.Value
                 let newHand = addPieces 0 (reducedHand) newTiles
                 let st' = {st with playerTurn = nextPlayer st st.playerNumber; hand = newHand}  // This state needs to be updated
                 System.Console.WriteLine "after"
@@ -191,10 +202,10 @@ module Scrabble =
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RGPE err -> printfn "Gameplay Error:\n%A" err; aux st
-
-
+            
         aux st
 
+    
     let startGame 
             (boardP : boardProg) 
             (dictf : bool -> Dictionary.Dict) 
@@ -216,13 +227,16 @@ module Scrabble =
         //let dict = dictf true // Uncomment if using a gaddag for your dictionary
         let dict = dictf false // Uncomment if using a trie for your dictionary
         let board = Parser.mkBoard boardP
+        
+        // Prints the square at a given coordinate
         let printSquare coord = 
             let tt = board.squares coord
             match tt with
             | Success squareOption ->
-                System.Console.WriteLine (sprintf "%d,%d = %A"(fst coord)(snd coord) ( squareOption))
+                System.Console.WriteLine (sprintf "%d,%d = %A" (fst coord) (snd coord) (squareOption))
             | Failure error -> System.Console.WriteLine error
-            
+        
+        // Prints the squares around the center within a given radius
         let rec aux r =
             let rec aux2 c =
                 printSquare (r,c)
@@ -231,7 +245,8 @@ module Scrabble =
             aux2 -7
             if (r < 7) then
                 aux (r+1)
-                
+        
+        // Print all squares around the center within a radius of 7
         aux -7
         
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
