@@ -5,36 +5,15 @@ module internal BestMove
     open ScrabbleUtil
 
     let startingSquares (placedTiles : Map<(int*int), uint32*(char*int)>) =
-        let rec aux (map: (Map<(int*int),(uint32*(char*int))>)) m offset =
+        let rec aux (map: Map<int*int,uint32 * (char*int)>) m offset =
             let lst = Map.toList map
             match lst with
             | [] -> m
             | ((x,y),_)::_ -> 
                 aux (map.Remove ((x,y))) (
-                    Set.add (x, (y+offset)) (Set.add ((x+offset), y) m
-                )) offset
-        Set.toList (aux placedTiles (aux placedTiles (aux placedTiles Set.empty -1) 1) 0)
-        (*Set.toList (
-            aux (Map.toList placedTiles) (
-                aux (Map.toList placedTiles) (
-                    aux (Map.toList placedTiles) (
-                        aux (Map.toList placedTiles) (
-                            aux (Map.toList placedTiles) (
-                                aux (Map.toList placedTiles) (
-                                    aux (Map.toList placedTiles) (
-                                        aux (Map.toList placedTiles) (
-                                            aux (Map.toList placedTiles) (
-                                                aux (Map.toList placedTiles
-                                            ) Set.empty 0
-                                        ) 1
-                                    ) -1
-                                ) -2
-                            ) -3
-                        ) -4
-                    ) -5
-                ) -6
-            ) -7
-        ) -8)*)
+                    Set.add (x, (y+offset))     (Set.add ((x+offset), y) m)
+                ) offset
+        Set.toList (aux placedTiles Set.empty -1 |> fun m -> aux placedTiles m 1 |> fun m -> aux placedTiles m 0)
         
     
     let processDir coord (placedTiles : Map<(int*int), (uint32*(char*int))>) (dict : Dictionary.Dict) (hand : (uint32*Set<(char*int)>) list) d r : ((((int*int)*(uint32*(char*int))) list)*int)=
@@ -77,14 +56,14 @@ module internal BestMove
             let ret = (aux 0 coord hand used dict) |> snd
             ret 
     
-    let processD coord (placedTiles : Map<(int*int), (uint32*(char*int))>) (dict : Dictionary.Dict) (hand : (uint32*Set<(char*int)>) list) : (((((int*int)*(uint32*(char*int)))) list)*int)=
+    let processDown coord (placedTiles : Map<int*int, uint32 * (char*int)>) (dict : Dictionary.Dict) (hand : (uint32 * Set<char*int>) list) : ((int*int) * (uint32 * (char*int))) list * int=
         let ret = (processDir coord placedTiles dict hand 1 0)
         ret
-    let processR coord (placedTiles : Map<(int*int), (uint32*(char*int))>) (dict : Dictionary.Dict) (hand : (uint32*Set<(char*int)>) list) : (((((int*int)*(uint32*(char*int)))) list)*int)=
+    let processRight coord (placedTiles : Map<int*int, uint32 * (char*int)>) (dict : Dictionary.Dict) (hand : (uint32*Set<char*int>) list) : ((int*int) * (uint32 * (char*int))) list * int=
         let ret = (processDir coord placedTiles dict hand 0 1)
         ret
             
-    let rec bestSquareToMove (bestSquare:(int*int)*((((uint32*(char*int)) list)*int)*bool)) : ((int*int)*(uint32*(char*int))) list =
+    let rec bestSquareToMove (bestSquare:(int*int) * (((uint32 * (char*int)) list * int) * bool)) : ((int*int) * (uint32 * (char*int))) list =
         let tiles = bestSquare |> snd |> fst |> fst
         let start = bestSquare |> fst
         let dir = bestSquare |> snd |> snd
@@ -93,16 +72,16 @@ module internal BestMove
         let lst = List.init tiles.Length (fun i -> (coords[i],tiles[i])) 
         lst
         
-    let suggestMove (board : Parser.board) (placedTiles : Map<(int*int), (uint32*(char*int))>) (dict : Dictionary.Dict) (hand : (uint32*Set<(char*int)>) list) =
+    let suggestMove (board : Parser.board) (placedTiles : Map<int*int, uint32 * (char*int)>) (dict : Dictionary.Dict) (hand : (uint32 * Set<char*int>) list) =
         let rec aux startingSquares =
             match startingSquares with
-            | c::l -> (List.maxBy (fun t -> t |> snd) [(processD c placedTiles dict hand); (processR c placedTiles dict hand)])::(aux l)
+            | c::l -> (List.maxBy (fun t -> t |> snd) [(processDown c placedTiles dict hand); (processRight c placedTiles dict hand)])::(aux l)
             | [] -> []
         // (coord, ((longestWord, length), dir))
         // dir : Down = true, Right = false
-        let ssquares = if placedTiles.IsEmpty then ([board.center]) else (startingSquares placedTiles) 
-        let lst = (aux (ssquares))
-        let bestSquare = (Seq.maxBy snd lst)
+        let ssquares = if placedTiles.IsEmpty then [board.center] else (startingSquares placedTiles) 
+        let lst = aux ssquares
+        let bestSquare = Seq.maxBy snd lst
         bestSquare |> fst
         
         
