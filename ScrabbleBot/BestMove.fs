@@ -20,7 +20,7 @@ module internal BestMove
                                  d r
                                  : ((int*int) * (uint32 * (char*int))) list * int
         =
-        if placedTiles.ContainsKey (fst coord - 1, snd coord)
+        if placedTiles.ContainsKey ((fst coord) - 1, snd coord)
         then ([],-1000)
         else
             let used = 0uy
