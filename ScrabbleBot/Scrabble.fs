@@ -121,13 +121,13 @@ module Scrabble =
             
             // Remove pieces with matching ids from the hand
             let removePieces hand (ids : uint32 list) =
-                let rec aux i h : MultiSet.MultiSet<uint32> =
+                let rec aux i : MultiSet.MultiSet<uint32> =
                     let id = ids[i]
                     if (i < ids.Length-1) then
-                        aux (i+1) (MultiSet.removeSingle id h)
+                        MultiSet.removeSingle id (aux (i+1))
                     else
-                        (MultiSet.removeSingle id hand)
-                aux 0 hand
+                        MultiSet.removeSingle id hand
+                aux 0
                     
             let rec addPieces i hand (pieces : (uint32 * uint32) list)=
                 let id, amount = pieces[i]
