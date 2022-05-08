@@ -15,12 +15,12 @@ module internal BestMove
         Set.toList (aux placedTiles Set.empty -1 |> fun m -> aux placedTiles m 1 |> fun m -> aux placedTiles m 0)
         
     
-    let processInDirection coord (placedTiles : Map<int*int, uint32 * (char*int)>)
+    let processInDirection (coord : int*int) (placedTiles : Map<int*int, uint32 * (char*int)>)
                                  (dict : Dictionary.Dict) (hand : (uint32 * Set<char*int>) list)
                                  d r
                                  : ((int*int) * (uint32 * (char*int))) list * int
         =
-        if placedTiles.ContainsKey (fst coord -1, snd coord)
+        if placedTiles.ContainsKey ((fst coord) - 1, snd coord)
         then ([],-1000)
         else
             let used = 0uy
@@ -42,7 +42,7 @@ module internal BestMove
                 let toExplore = tilesToExplore [] 0
                 let rec explore j =
                     let idx, defTile = toExplore[j]
-                    let tile = (Option.defaultValue (defTile) (placedTiles.TryFind coord))
+                    let tile = (Option.defaultValue defTile (placedTiles.TryFind coord))
                     let placed = placedTiles.ContainsKey coord
                     let id,(ch,pts) = tile
                     let n = (Dictionary.step ch) dict
