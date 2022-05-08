@@ -20,7 +20,7 @@ module internal BestMove
                                  d r
                                  : ((int*int) * (uint32 * (char*int))) list * int
         =
-        if placedTiles.ContainsKey ((fst coord) - 1, snd coord)
+        if placedTiles.ContainsKey ((fst coord) - r, (snd coord) - d)
         then ([],-1000)
         else
             let used = 0uy
@@ -48,11 +48,11 @@ module internal BestMove
                     let n = (Dictionary.step ch) dict
                     match n with
                     | None ->
-                        let ret = (false,([],0)):: if j < toExplore.Length-1 then explore (j+1) else List.empty
+                        let ret = (false,([],if placed then -1000 else 0)):: if j < toExplore.Length-1 then explore (j+1) else List.empty
                         ret
                     | Some (b, dict) ->
                         let x,y = coord
-                        let nc = (x+d, y+r)
+                        let nc = (x+r, y+d)
                         let ret = (aux (acc + pts) nc hand (if placed then u else (u ||| (1uy<<<idx))) dict)
                         let add = (b || (ret|>fst))
                         let s = ret |> snd |> fst 
