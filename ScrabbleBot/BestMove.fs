@@ -16,19 +16,26 @@ module internal BestMove
         
     
     let processInDirection coord (placedTiles : Map<int*int, uint32 * (char*int)>)
-                                 (dict : Dictionary.Dict) (hand : (uint32 * Set<char*int>) list) d r
-                                 : ((int*int)*(uint32*(char*int))) list * int
+                                 (dict : Dictionary.Dict) (hand : (uint32 * Set<char*int>) list)
+                                 d r
+                                 : ((int*int) * (uint32 * (char*int))) list * int
         =
-        if placedTiles.ContainsKey (((fst coord)-1), snd coord) then ([],-1000)
+        if placedTiles.ContainsKey (fst coord -1, snd coord)
+        then ([],-1000)
         else
             let used = 0uy
-            let rec aux acc coord (hand : (uint32*Set<(char*int)>) list) (u:byte) (dict : Dictionary.Dict): (bool*((((int*int)*(uint32*(char*int))) list)*int)) =
+            let rec aux acc coord (hand : (uint32 * Set<char*int>) list)
+                                  (u : byte) (dict : Dictionary.Dict)
+                                  : bool * (((int*int) * (uint32 * (char*int))) list * int)
+                =
                 let rec tilesToExplore lst i = 
-                    if (((u &&& (1uy<<<i)) = 0uy) && (i < hand.Length)) then
+                    if (((u &&& (1uy<<<i)) = 0uy) && (i < hand.Length))
+                    then
                         let setList = hand[i] |> snd |> Set.toList
                         let l = List.init setList.Length (fun j -> (i,((fst hand[i]),setList[j]))) @ lst
                         tilesToExplore l (i+1)
-                    else if (i < hand.Length) then
+                    else if (i < hand.Length)
+                    then
                         tilesToExplore lst (i+1)
                     else
                         lst
@@ -78,7 +85,7 @@ module internal BestMove
         let dir = bestSquare |> snd |> snd
         //let pts = (bestSquare |> snd |> fst |> snd)
         let coords = List.init tiles.Length (fun i -> ( start |> fst |> (+) (if dir then i else 0), start |> snd |> (+) (if not dir then i else 0) ) )
-        let lst = List.init tiles.Length (fun i -> (coords[i],tiles[i])) 
+        let lst = List.init tiles.Length (fun i -> (coords[i],tiles[i]))
         lst
         
     let suggestMove (board : Parser.board) (placedTiles : Map<int*int, uint32 * (char*int)>)
@@ -94,15 +101,9 @@ module internal BestMove
             
         // (coord, ((longestWord, length), dir))
         // dir : Down = true, Right = false
-        let startSquares = if placedTiles.IsEmpty then [board.center] else (startingSquares placedTiles) 
+        let startSquares = if placedTiles.IsEmpty then [board.center] else (startingSquares placedTiles)
         let lst = aux startSquares
         
         // return best square
         fst (Seq.maxBy snd lst)
         
-        
-        
-        
-        
-    
-
