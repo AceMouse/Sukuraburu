@@ -53,27 +53,23 @@ module internal BestMove
                 =
                 let rec toBegining coord d r =
                     let x, y = coord
-                    let nx = x+r
-                    let ny = y+d
-                    if placedTiles.ContainsKey (nx,ny) then
-                        toBegining (nx,ny) d r
-                    else
-                        (x,y)
+                    let rec aux i = 
+                        match (placedTiles.ContainsKey (x+r*i,y+d*i)) with
+                        | true -> aux (i + 1)
+                        | false -> (x+r*i,y+d*i)
+                    aux 0
                 
                 let rec illegal (ch:char) (coord:int*int) d r : bool=
-                    let start = toBegining coord -d -r
-                    let rec aux (c:int*int) :string =
-                        let x, y = c
-                        let cha = 
-                            if c = coord then Some(ch)
-                            else
-                                match placedTiles.TryFind coord with
-                                | None -> None
-                                | Some (_,(a, _)) -> Some(a)
-                        match cha with
-                        | None -> ""
-                        | Some value -> (value|> string) + (aux (x+r, y+d)) 
-                    not (Dictionary.lookup (aux start) legalDict)
+                    // intentional rotation flip
+                    let start = toBegining coord -r -d
+                    let x, y = start
+                    let rec aux i = 
+                        match (placedTiles.ContainsKey (x+d*i,y+r*i)) with
+                        | true -> (placedTiles.Item (x+d*i,y+r*i) |> snd |> fst |> string ) + (aux (i + 1))
+                        | false -> if (x+d*i,y+r*i) = coord then (ch |> string) + (aux (i + 1)) else ""
+                    let word = (aux 0)
+                    word.Length < 2 || not (Dictionary.lookup word legalDict)
+                    
                     
                 let rec tilesToExplore lst i = 
                     if (((u &&& (1uy<<<i)) = 0uy) && (i < hand.Length))
@@ -88,26 +84,29 @@ module internal BestMove
                         lst
                 let toExplore = tilesToExplore [] 0
                 let rec explore j =
-                    let idx, defTile = toExplore[j]
-                    let tile = (Option.defaultValue defTile (placedTiles.TryFind coord))
-                    let placed = placedTiles.ContainsKey coord
-                    let id,(ch,pts) = tile
-                    if adj.Contains coord && illegal ch coord d r then (false,([],if placed then -1000 else 0)):: if j < toExplore.Length-1 then explore (j+1) else List.empty
-                    else
-                        let n = (Dictionary.step ch) dict
-                        match n with
-                        | None ->
-                            let ret = (false,([],if placed then -1000 else 0)):: if j < toExplore.Length-1 then explore (j+1) else List.empty
-                            ret
-                        | Some (b, dict) ->
-                            let x,y = coord
-                            let nc = (x+r, y+d)
-                            let ret = (aux (acc + pts) nc hand (if placed then u else (u ||| (1uy<<<idx))) dict)
-                            let add = (b || (ret|>fst))
-                            let s = ret |> snd |> fst 
-                            let p = ret |> snd |> snd
-                            let ret = (add,((if add && not placed then ((x,y),(id,(ch,pts)))::s else s), (if add then p + pts else p))):: if j < toExplore.Length-1 then explore (j+1) else List.empty
-                            ret
+                    if (j >= toExplore.Length) then
+                        [(false,([], -1000 ))]
+                    else 
+                        let idx, defTile = toExplore[j]
+                        let tile = (Option.defaultValue defTile (placedTiles.TryFind coord))
+                        let placed = placedTiles.ContainsKey coord
+                        let id,(ch,pts) = tile
+                        if adj.Contains coord && illegal ch coord d r then (false,([],if placed then -1000 else 0)):: if j < toExplore.Length-1 then explore (j+1) else List.empty
+                        else
+                            let n = (Dictionary.step ch) dict
+                            match n with
+                            | None ->
+                                let ret = (false,([],if placed then -1000 else 0)):: if j < toExplore.Length-1 then explore (j+1) else List.empty
+                                ret
+                            | Some (b, dict) ->
+                                let x,y = coord
+                                let nc = (x+r, y+d)
+                                let ret = (aux (acc + pts) nc hand (if placed then u else (u ||| (1uy<<<idx))) dict)
+                                let add = (b || (ret|>fst))
+                                let s = ret |> snd |> fst 
+                                let p = ret |> snd |> snd
+                                let ret = (add,((if add && not placed then ((x,y),(id,(ch,pts)))::s else s), (if add then p + pts else p))):: if j < toExplore.Length-1 then explore (j+1) else List.empty
+                                ret
                     
                 List.maxBy snd (explore 0)
                         
@@ -135,8 +134,8 @@ module internal BestMove
         =
         let adj = adjSquares placedTiles
         let adjSet = Set.ofList adj
-        let rec aux (startingSquares: ((int*int)*int) list) (down : bool)  =
-            match startingSquares with
+        let rec aux (startSquares: ((int*int)*int) list) (down : bool)  =
+            match startSquares with
                 | (coord,minlen)::l -> (if down then (processDown coord minlen placedTiles dicts dicts[0] hand adjSet) else (processRight coord minlen placedTiles dicts dicts[0] hand adjSet)) :: (aux l down) 
                 | [] -> []
             
@@ -144,6 +143,35 @@ module internal BestMove
         // dir : Down = true, Right = false
         
         let right, down = if placedTiles.IsEmpty then startingSquares [board.center] else (startingSquares adj)
+        let arr = Array2D.create 16 16 -1
+        let rightlen =  (List.length right) - 1
+        for i in 0.. rightlen do
+            let (x, y), len = right.Item i
+            let inbounds x = x <= 7 && x >= -8 
+            if inbounds x && inbounds y then
+                arr[y+8,x+8] <- len*10
+        
+        for y in 0.. 15 do
+            for x in 0.. 15 do
+                System.Console.Write arr[y,x]
+                System.Console.Write " "
+            System.Console.Write "\n"
+            
+        let arr = Array2D.create 16 16 -1
+        let downlen =  (List.length down) - 1
+        for i in 0.. downlen do
+            let (x, y), len = down.Item i
+            let inbounds x = x <= 7 && x >= -8 
+            if inbounds x && inbounds y then
+                arr[y+8,x+8] <- len*10
+        System.Console.WriteLine "\n----------------"
+        for y in 0.. 15 do
+            for x in 0.. 15 do
+                System.Console.Write arr[y,x]
+                System.Console.Write " "
+            System.Console.Write "\n"
+            
+            
         let rlst = aux right false
         let dlst = aux down true
         
