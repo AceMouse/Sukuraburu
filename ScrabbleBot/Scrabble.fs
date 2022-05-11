@@ -75,7 +75,8 @@ module State =
 
 module Scrabble =
     let playGame cstream pieces (st : State.state) =
-        let dicts = (DickSplitter.splitDictionary "../Scrabble/Dictionaries/English.txt")
+        let dicts = (DickSplitter.splitDictionary "/home/maroka/RiderProjects/Scrabble/Sukuraburu/ScrabbleBot/Dictionaries/English.txt")
+
         let rec aux (st : State.state) =
             let move, change = 
                 //if st.playerNumber = st.playerTurn then
