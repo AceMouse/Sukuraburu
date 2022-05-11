@@ -25,10 +25,10 @@
     <Compile Include="Eval.fs" />
     <Compile Include="Parser.fsi" />
     <Compile Include="Parser.fs" />
-    <Compile Include="BestMove.fsi" />
-    <Compile Include="BestMove.fs" />
     <Compile Include="Dict.fsi" />
     <Compile Include="Dict.fs" />
+    <Compile Include="BestMove.fsi" />
+    <Compile Include="BestMove.fs" />
     <Compile Include="DickSplitter.fs" />
     <Compile Include="Scrabble.fsi" />
     <Compile Include="Scrabble.fs" />

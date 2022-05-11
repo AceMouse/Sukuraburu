@@ -2,6 +2,7 @@
 
 open System.Runtime.InteropServices.ComTypes
 open Parser
+open ScrabbleBot
 open ScrabbleUtil
 open ScrabbleUtil.ServerCommunication
 open System.IO
@@ -74,7 +75,7 @@ module State =
 
 module Scrabble =
     let playGame cstream pieces (st : State.state) =
-        
+        let dicts = (DickSplitter.splitDictionary "../Scrabble/Dictionaries/English.txt")
         let rec aux (st : State.state) =
             let move, change = 
                 //if st.playerNumber = st.playerTurn then
@@ -105,7 +106,8 @@ module Scrabble =
                         //let input =  System.Console.ReadLine()
                         //let move = RegEx.parseMove input
                         forcePrint "calculating... "
-                        let move = BestMove.suggestMove st.board st.placedTiles st.dict (MultiSet.toList st.hand pieces)
+                        
+                        let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces)
                         forcePrint (sprintf "done!\n found move %A" move)
                         debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                         send cstream (SMPlay move)
