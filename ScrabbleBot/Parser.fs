@@ -14,7 +14,6 @@ module internal Parser
     for successful parses although running times and error messages will differ. Please report any inconsistencies.
 
     *)
-    
     let pIntToChar  = pstring "intToChar"
     let pPointValue = pstring "pointValue"
 
@@ -52,7 +51,7 @@ module internal Parser
     let parenthesise p = pchar '(' >*>. p .>*> pchar ')'
     let curlysise p = pchar '{' >*>. p .>*> pchar '}' 
 
-    let pid = pletter <|> pchar '_' .>>. many (palphanumeric <|> pchar '_')|>> (fun (x,xs) -> x::xs) |>> List.toArray |>> System.String
+    let pid = (pletter <|> pchar '_') .>>. many (palphanumeric <|> pchar '_') |>> (fun (x,xs) -> x::xs) |>> List.toArray |>> System.String
 
     
     let unop op a = op >*>. a
@@ -96,10 +95,11 @@ module internal Parser
     let BTermParse, btref = createParserForwardedToRef<bExp>()
     let BProdParse, bpref = createParserForwardedToRef<bExp>()
     let BAtomParse, baref = createParserForwardedToRef<bExp>()
-    let TruParser = pstring "true" |>> (fun _ -> TT) <?> "TT"
-    let FlsParser = pstring "false" |>> (fun _ -> FF) <?> "FF"
-    let AndParser =  BTermParse .>*> pstring @"/\" .>*>. BTermParse |>> Conj <?> "Conj"
-    let OrParser =  BTermParse .>*> pstring @"\/" .>*>. BTermParse |>> (fun (a,b) -> ((.||.) a b)) <?> "Disj"
+    let TruParser = pTrue |>> (fun _ -> TT) <?> "TT"
+    let FlsParser = pFalse |>> (fun _ -> FF) <?> "FF"
+    let BParParse = parenthesise BTermParse <?> "Par"
+    let AndParser =  BProdParse .>*> pstring @"/\" .>*>. BProdParse |>> Conj <?> "Conj"
+    let OrParser =  BProdParse .>*> pstring @"\/" .>*>. BProdParse |>> (fun (a,b) -> ((.||.) a b)) <?> "Disj"
     let AEqParser = AexpParse .>*> pchar '=' .>*>. AexpParse |>> AEq <?> "AEq"
     let ANEqParser =  AexpParse .>*> pstring "<>" .>*>. AexpParse |>> (fun (a,b) -> ((.<>.) a b)) <?> "ANEq"
     let ALTParser =  AexpParse .>*> pchar '<' .>*>. AexpParse |>> (fun (a,b) -> ((.<.) a b)) <?> "ALT"
@@ -108,20 +108,27 @@ module internal Parser
     let AGEqParser =  AexpParse .>*> pstring ">=" .>*>. AexpParse |>> (fun (a,b) -> ((.>=.) a b)) <?> "AGEq"
     let NegParser = pchar '~' >*>. BTermParse |>> Not <?> "Not"
     let IsLetter = pIsLetter >*>. parenthesise CharParse |>> IsLetter <?> "IsLetter"
-    let IsDigit = pIsDigit >*>. parenthesise CharParse |>> IsDigit <?> "IsDigit"
-    do baref.Value <- choice [NegParser; IsDigit; IsLetter; TruParser; FlsParser]
-    do bpref.Value <- choice [AEqParser; ANEqParser; AGEqParser; ALEqParser; AGTParser; ALTParser; BAtomParse]
-    do btref.Value <- choice [AndParser; OrParser; BProdParse]
+    let IsVowel = pIsVowel >*>. parenthesise CharParse |>> IsVowel <?> "IsVowel"
 
+    let IsDigit = pIsDigit >*>. parenthesise CharParse |>> IsDigit <?> "IsDigit"
+    
+    do btref.Value <- choice [AndParser; OrParser; BProdParse]
+    do bpref.Value <- choice [AEqParser; ANEqParser; ALTParser; ALEqParser; AGTParser; AGEqParser; BAtomParse]
+    do baref.Value <- choice [NegParser; IsLetter; IsVowel; IsDigit; TruParser; FlsParser; BParParse]
+    let BexpParse = BTermParse
     let stmntParser, sref = createParserForwardedToRef<stm>()
+    let stmntSeqParser, seqref = createParserForwardedToRef<stm>()
     
-    let DeclareParser = pdeclare >>. spaces1 >>. many pletter |>> fun clst -> clst |> List.toArray |> string |> Declare
-    let AssParser = pid .>*> pstring ":=" .>*>. TermParse |>> Ass
-    let SeqParser = stmntParser .>*> pchar ';' .>*>. stmntParser |>> Seq
-    let ITEParser = pif >*>. parenthesise BTermParse .>*> pthen .>*>. curlysise stmntParser .>*> pelse .>*>. curlysise stmntParser |>> fun ((b, st1), st2) -> ITE (b, st1, st2)
-    let WhileParser = pwhile >*>. parenthesise BTermParse .>*> pdo .>*>. curlysise stmntParser |>> While
+    let DeclareParser = pdeclare >>. spaces1 >>. pid |>> Declare <?> "Declare"
+    let AssParser = pid .>*> pstring ":=" .>*>. TermParse |>> Ass <?> "Ass"
+    let SeqParser = stmntSeqParser .>*> pchar ';' .>*>. stmntParser |>> Seq <?> "Seq"
+    let ITEParser = pif >*>. BParParse .>*> pthen .>*>. curlysise stmntParser .>*> pelse .>*>. curlysise stmntParser |>> (fun ((b, st1), st2) -> ITE (b, st1, st2)) <?> "ITE"
+    let ITParser = pif >*>. BParParse .>*> pthen .>*>. curlysise stmntParser |>> (fun (x, y) -> ITE (x, y, Skip)) <?> "IT"
+    let WhileParser = pwhile >*>. parenthesise BTermParse .>*> pdo .>*>. curlysise stmntParser |>> While <?> "While"
+    let SkipParse = pstring "Skip" |>> (fun _ -> Skip) <?> "Skip"
     
-    do sref.Value <- choice [DeclareParser; AssParser; SeqParser; ITEParser; WhileParser]
+    do sref.Value <- choice [SeqParser; stmntSeqParser] 
+    do seqref.Value <- choice [AssParser; DeclareParser; ITEParser; ITParser; WhileParser; SkipParse]
 
     (* The rest of your parser goes here *)
     
@@ -137,9 +144,10 @@ module internal Parser
         squares       : boardFun2
     }
     
-    let mkBoard (prog:boardProg) : board = {
-        center = prog.center
-        defaultSquare = parseSquareProg (Map.find prog.usedSquare prog.squares)
-        squares = parseBoardProg prog.prog (Map.map (fun _ -> parseSquareProg) prog.squares)
-    }
+    let mkBoard (prog:boardProg) : board = 
+        {
+            center = prog.center
+            defaultSquare = Map.find prog.usedSquare (Map.map (fun _ -> parseSquareProg) prog.squares)
+            squares = parseBoardProg prog.prog (Map.map (fun _ -> parseSquareProg) prog.squares)
+        }
     

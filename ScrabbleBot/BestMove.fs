@@ -1,6 +1,7 @@
 module internal BestMove
 
     open Microsoft.FSharp.Collections
+    open ScrabbleBot
     
     let adjSquares (placedTiles : Map<int*int, uint32 * (char*int)>)
         =
@@ -48,7 +49,7 @@ module internal BestMove
         else
             let used = 0uy
             let rec aux (acc:int) coord (hand : (uint32 * Set<char*int>) list)
-                                  (u : byte) (dict : Dictionary.Dict)
+                                  (usedMask : byte) (dict : Dictionary.Dict)
                                   : bool * (((int*int) * (uint32 * (char*int))) list * int)
                 =
                 let rec toBegining coord d r =
@@ -70,19 +71,7 @@ module internal BestMove
                     let word = (aux 0)
                     word.Length < 2 || not (Dictionary.lookup word legalDict)
                     
-                    
-                let rec tilesToExplore lst i = 
-                    if (((u &&& (1uy<<<i)) = 0uy) && (i < hand.Length))
-                    then
-                        let setList = hand[i] |> snd |> Set.toList
-                        let l = List.init setList.Length (fun j -> (i,((fst hand[i]),setList[j]))) @ lst
-                        tilesToExplore l (i+1)
-                    else if (i < hand.Length)
-                    then
-                        tilesToExplore lst (i+1)
-                    else
-                        lst
-                let toExplore = tilesToExplore [] 0
+                let toExplore = Points.tilePoints usedMask hand [] 0
                 let rec explore j =
                     if (j >= toExplore.Length) then
                         [(false,([], -1000 ))]
@@ -101,7 +90,7 @@ module internal BestMove
                             | Some (b, dict) ->
                                 let x,y = coord
                                 let nc = (x+r, y+d)
-                                let ret = (aux (acc + pts) nc hand (if placed then u else (u ||| (1uy<<<idx))) dict)
+                                let ret = (aux (acc + pts) nc hand (if placed then usedMask else (usedMask ||| (1uy<<<idx))) dict)
                                 let add = (b || (ret|>fst))
                                 let s = ret |> snd |> fst 
                                 let p = ret |> snd |> snd

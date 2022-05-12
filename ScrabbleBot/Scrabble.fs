@@ -75,7 +75,9 @@ module State =
 
 module Scrabble =
     let playGame cstream pieces (st : State.state) =
-        let dicts = (DickSplitter.splitDictionary "/home/maroka/RiderProjects/Scrabble/Sukuraburu/ScrabbleBot/Dictionaries/English.txt")
+        let dictPath = (Directory.GetCurrentDirectory() + "/../../../../ScrabbleBot/Dictionaries/English.txt")
+        printfn "%s" dictPath;
+        let dicts = (DickSplitter.splitDictionary dictPath)
 
         let rec aux (st : State.state) =
             let move, change = 
@@ -236,7 +238,7 @@ module Scrabble =
             let tt = board.squares coord
             match tt with
             | Success squareOption ->
-                System.Console.WriteLine (sprintf "%d,%d = %A" (fst coord) (snd coord) (squareOption))
+                printfn "%A = %A" coord squareOption.Value
             | Failure error -> System.Console.WriteLine error
         
         // Prints the squares around the center within a given radius

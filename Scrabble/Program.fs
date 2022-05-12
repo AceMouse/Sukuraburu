@@ -46,7 +46,7 @@ let main argv =
     let handSize   = 7u
     let timeout    = None
     let tiles      = ScrabbleUtil.English.tiles 1u
-    let seed       = None
+    let seed       = Some 1
     let port       = 13001
 
     let dictAPI =
@@ -67,8 +67,8 @@ let main argv =
           board dictionary handSize timeout tiles seed port players
     
     
-    
-    let a = ScrabbleUtil.Dictionary.test <| (File.ReadAllLines "/home/asmus/RiderProjects/Sukuraburu/Scrabble/Dictionaries/English.txt") <| 2 <|(dictionary true)
+    let dictPath = (Directory.GetCurrentDirectory() + "/../../../../ScrabbleBot/Dictionaries/English.txt")
+    let a = ScrabbleUtil.Dictionary.test <| (File.ReadAllLines dictPath) <| 2 <|(dictionary true)
     a |> string |> System.Console.WriteLine
     ScrabbleUtil.DebugPrint.forcePrint ("Server has terminated. Press Enter to exit program.\n")
     System.Console.ReadLine () |> ignore
