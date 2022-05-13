@@ -42,6 +42,7 @@ module internal BestMove
                                  (dict : Dictionary.Dict) (legalDict : Dictionary.Dict) (hand : (uint32 * Set<char*int>) list)
                                  (adj: Set<int*int>)
                                  d r
+                                 (infinite : bool)
                                  : ((int*int) * (uint32 * (char*int))) list * int
         =
         if placedTiles.ContainsKey ((fst coord) - r, (snd coord) - d)
@@ -70,9 +71,14 @@ module internal BestMove
                         | false -> if (x+d*i,y+r*i) = coord then (ch |> string) + (aux (i + 1)) else ""
                     let word = (aux 0)
                     word.Length < 2 || not (Dictionary.lookup word legalDict)
+                let outOfBounds (x,y) =
+                     (not infinite) && (x > 7 || x < -7 || y > 7 || y < -7)  
                     
                 let toExplore = Points.tilePoints usedMask hand [] 0
                 let rec explore j =
+                    (*if outOfBounds coord then
+                        [(false,([], 0 ))]
+                    else*)
                     if (j >= toExplore.Length) then
                         [(false,([], -1000 ))]
                     else 
@@ -96,7 +102,7 @@ module internal BestMove
                                 let p = ret |> snd |> snd
                                 let ret = (add,((if add && not placed then ((x,y),(id,(ch,pts)))::s else s), (if add then p + pts else p))):: if j < toExplore.Length-1 then explore (j+1) else List.empty
                                 ret
-                    
+                
                 List.maxBy snd (explore 0)
                         
             let ret = (aux 0 coord hand used dict) |> snd
@@ -107,25 +113,28 @@ module internal BestMove
                           (dict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
+                          (infinite: bool)
                           : ((int*int) * (uint32 * (char*int))) list * int
-        = processInDirection coord placedTiles dicts[minLen] dict hand adj 1 0
+        = processInDirection coord placedTiles dicts[minLen] dict hand adj 1 0 infinite
         
     let processRight coord minLen (placedTiles : Map<int*int, uint32 * (char*int)>)
                           (dicts : Dictionary.Dict list)
                           (dict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
+                          (infinite : bool)
                           : ((int*int) * (uint32 * (char*int))) list * int
-        = processInDirection coord placedTiles dicts[minLen] dict hand adj 0 1
+        = processInDirection coord placedTiles dicts[minLen] dict hand adj 0 1 infinite
         
     let suggestMove (board : Parser.board) (placedTiles : Map<int*int, uint32 * (char*int)>)
                     (dicts : Dictionary.Dict list) (hand : (uint32 * Set<char*int>) list)
+                    (infinite: bool)
         =
         let adj = adjSquares placedTiles
         let adjSet = Set.ofList adj
         let rec aux (startSquares: ((int*int)*int) list) (down : bool)  =
             match startSquares with
-                | (coord,minlen)::l -> (if down then (processDown coord minlen placedTiles dicts dicts[0] hand adjSet) else (processRight coord minlen placedTiles dicts dicts[0] hand adjSet)) :: (aux l down) 
+                | (coord,minlen)::l -> (if down then (processDown coord minlen placedTiles dicts dicts[0] hand adjSet infinite) else (processRight coord minlen placedTiles dicts dicts[0] hand adjSet infinite)) :: (aux l down) 
                 | [] -> []
             
         // (coord, ((longestWord, length), dir))

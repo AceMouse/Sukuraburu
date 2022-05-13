@@ -74,18 +74,18 @@ module State =
     let hand st          = st.hand
 
 module Scrabble =
-    let playGame cstream pieces (st : State.state) =
+    let playGame cstream pieces (st : State.state) Infinite =
         let dictPath = (Directory.GetCurrentDirectory() + "/../../../../ScrabbleBot/Dictionaries/English.txt")
         printfn "%s" dictPath;
         let dicts = (DickSplitter.splitDictionary dictPath)
 
         let rec aux (st : State.state) =
-            let move, change = 
+            (*let move, change = 
                 //if st.playerNumber = st.playerTurn then
                     Print.printHand pieces (State.hand st)
                     System.Console.WriteLine st.hand
                     System.Console.WriteLine "Move or Change or Forfeit or Pass?(m|c|f|p)\n\n"
-                    let action = System.Console.ReadLine()[0]
+                    let action = 'm'//System.Console.ReadLine()[0]
                     // remove the force print when you move on from manual input (or when you have learnt the format)
                     match action with
                     | 'c' ->
@@ -108,9 +108,9 @@ module Scrabble =
                         //forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
                         //let input =  System.Console.ReadLine()
                         //let move = RegEx.parseMove input
-                        forcePrint "calculating... "
+                        forcePrint "calculating... \n"
                         
-                        let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces)
+                        let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces) Infinite
                         forcePrint (sprintf "done!\n found move %A" move)
                         debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                         send cstream (SMPlay move)
@@ -118,8 +118,27 @@ module Scrabble =
                         debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                         (Some(move), None)    
                 //else
-                    //(None, None)
-                
+                    //(None, None)*)
+            let move, change = if st.playerTurn = st.playerNumber then
+                                    forcePrint "calculating... \n"
+                                                
+                                    let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces) Infinite
+                                    if not move.IsEmpty then 
+                                        forcePrint (sprintf "done!\n found move %A" move)
+                                        debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+                                        send cstream (SMPlay move)
+                                        
+                                        debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
+                                        (Some(move), None)   
+                                    else
+                                        forcePrint "Changing tiles\n\n"
+                                        //let input =  System.Console.ReadLine()
+                                        let change = List.map fst (MultiSet.toList st.hand pieces)
+                                        send cstream (SMChange change)
+                                        debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) change) // keep the debug lines. They are useful.
+                                        (None, Some(change))
+                                else
+                                    (None, None)
             let msg = recv cstream
                         
                         
@@ -142,8 +161,12 @@ module Scrabble =
                     (MultiSet.add id amount hand)
                     
             let nextPlayer (st:State.state) curPlayer =
-                let playerOrder = List.append (st.notForfeited[(((curPlayer |> int)+1)%(st.playerCount|>int))..]) (st.notForfeited[..(curPlayer |> int)])
-                (curPlayer + ((List.findIndex id playerOrder) |> uint32))%st.playerCount
+                let player = (curPlayer |> uint32) - 1u
+                let s, e = List.splitAt curPlayer st.notForfeited
+                let playerOrder = e @ s
+                let offset = (List.findIndex id playerOrder |> uint32)+ 1u
+                let ret = ((player + offset)%st.playerCount) + 1u
+                ret
                 
             let rec placeTiles placedTiles (tiles:((int*int)*(uint32*(char*int))) list) : Map<(int*int),(uint32*(char*int))>=
                 match tiles with
@@ -157,53 +180,51 @@ module Scrabble =
             match msg with
             | RCM (CMPlaySuccess(move, points, newPieces)) ->
                 (* Successful play by you. Update your state (remove old tiles, add the new ones, change turn, etc) *)
-                System.Console.WriteLine "\n----------"
-                System.Console.WriteLine "before"
-                System.Console.WriteLine st.hand
+                
                 //                                     | Maps a function that will return the ids of the moved pieces
                 let reducedHand = removePieces st.hand (List.map (fun (_, x) -> fst x) move)
                 let newHand = addPieces 0 (reducedHand) newPieces
                 
                 // Update state
                 let st' = {st with
-                               playerTurn = nextPlayer st st.playerNumber
+                               playerTurn = nextPlayer st (st.playerTurn |> int)
                                hand = newHand
                                points = List.mapi (fun i v -> if i = (st.playerNumber |> int) then v + points else v) st.points
                                placedTiles = placeTiles st.placedTiles move}  // This state needs to be updated
-                System.Console.WriteLine "after"
-                System.Console.WriteLine st'.hand
-                System.Console.WriteLine "----------"
+                
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
                 (* Successful play by other player. Update your state *)
-                let st' = {st with playerTurn = nextPlayer st pid; points = List.mapi (fun i v -> if i = (pid |> int) then v + points else v) st.points; placedTiles = placeTiles st.placedTiles ms}  // This state needs to be updated
+                let newPlacedTiles = placeTiles st.placedTiles ms
+                let st' = {st with
+                               playerTurn = nextPlayer st (st.playerTurn |> int)
+                               points = List.mapi (fun i v -> if i = (pid |> int) then v + points else v) st.points
+                               placedTiles = newPlacedTiles}  // This state needs to be updated
                 aux st'
             | RCM (CMPassed pid) ->
-                let st' = {st with playerTurn = nextPlayer st pid}  // This state needs to be updated
+                let st' = {st with playerTurn = nextPlayer st (pid |> int)}  // This state needs to be updated
                 aux st'
             | RCM (CMChange(pid, numTiles)) ->
-                let st' = {st with playerTurn = nextPlayer st pid}  // This state needs to be updated
+                let st' = {st with playerTurn = nextPlayer st (pid |> int)}  // This state needs to be updated
                 aux st'
             | RCM (CMChangeSuccess newTiles) ->
-                System.Console.WriteLine "----------"
-                System.Console.WriteLine "before"
-                System.Console.WriteLine st.hand
                 let reducedHand = removePieces st.hand change.Value
                 let newHand = addPieces 0 (reducedHand) newTiles
-                let st' = {st with playerTurn = nextPlayer st st.playerNumber; hand = newHand}  // This state needs to be updated
-                System.Console.WriteLine "after"
-                System.Console.WriteLine st'.hand
-                System.Console.WriteLine "----------"
+                let st' = {st with
+                               playerTurn = nextPlayer st (st.playerTurn |> int)
+                               hand = newHand}  // This state needs to be updated
                 aux st'
             | RCM (CMForfeit pid) ->
-                let st' = {st with playerTurn = nextPlayer st pid; notForfeited = List.mapi (fun i v -> if i = (pid |> int) then false else v) st.notForfeited }  // This state needs to be updated
+                let st' = {st with
+                               playerTurn = nextPlayer st (pid |> int)
+                               notForfeited = List.mapi (fun i v -> if i = (pid |> int) then false else v) st.notForfeited }  // This state needs to be updated
                 aux st'
             | RCM (CMPlayFailed (pid, ms)) ->
                 (* Failed play. Update your state *)
                 let st' = st // This state needs to be updated
                 aux st'
             | RCM (CMTimeout pid) ->
-                let st' = {st with playerTurn = nextPlayer st pid}  // This state needs to be updated
+                let st' = {st with playerTurn = nextPlayer st (pid |> int)}  // This state needs to be updated
                 aux st'
             | RCM (CMGameOver _) -> ()
             | RGPE err -> printfn "Gameplay Error:\n%A" err; aux st
@@ -255,5 +276,5 @@ module Scrabble =
         aux -7
         
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet playerTurn numPlayers (List.init (numPlayers |> int) (fun _ -> true)) (List.ofArray (Array.zeroCreate (numPlayers |> int))) Map.empty)
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet playerTurn numPlayers (List.init (numPlayers |> int) (fun _ -> true)) (List.ofArray (Array.zeroCreate (numPlayers |> int))) Map.empty) boardP.isInfinite
         
