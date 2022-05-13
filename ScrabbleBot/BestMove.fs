@@ -136,10 +136,15 @@ module internal BestMove
         let adjSet = Set.ofList adj
         
         let rec aux (startSquares: ((int*int)*int) list) (down : bool)  =
-            Array.Parallel.map (fun (coord, minlen) -> if down then (processDown coord minlen placedTiles dicts dicts[0] hand adjSet infinite) else (processRight coord minlen placedTiles dicts dicts[0] hand adjSet infinite)) (List.toArray startSquares)  
-            (*match startSquares with
-                | (coord,minlen)::l ->  :: (aux l down) 
-                | [] -> []*)
+            Array.Parallel.map
+                (
+                 fun (coord, minlen) ->
+                    if down then
+                        processDown coord minlen placedTiles dicts dicts[0] hand adjSet infinite
+                    else
+                        processRight coord minlen placedTiles dicts dicts[0] hand adjSet infinite
+                )
+                (List.toArray startSquares)  
             
         // (coord, ((longestWord, length), dir))
         // dir : Down = true, Right = false
