@@ -153,11 +153,8 @@ module internal Eval
             | Ass(s, aExp) -> arithEval aExp >>= update s 
             | Skip -> ret()
             | Seq (st1, st2) -> stmntEval st1 >>>= stmntEval st2
-            | ITE (b, st1, st2) -> boolEval b >>= fun b -> if b then stmntEval st1 else stmntEval st2
-            | While (b, st) -> boolEval b >>= fun b1 -> if b1 then stmntEval (Seq(st, While(b, st))) else ret ()
-                    
-                    
-                                    
+            | ITE (b, st1, st2) -> boolEval b >>= fun b -> if b then push >>>= stmntEval st1 >>>= pop else push >>>= stmntEval st2 >>>= pop
+            | While (b, st) -> boolEval b >>= fun b1 -> if b1 then push >>>= stmntEval (Seq(st, While(b, st))) >>>= pop else ret ()                            
     
 (* Part 3 (Optional) *)
 
@@ -184,8 +181,7 @@ module internal Eval
     type square = Map<int, squareFun>
     
     let stmntToSquareFun stmnt : squareFun =
-        fun w pos acc -> evalSM (mkState [("_pos_", pos); ("_acc_", acc)] w ["_result_"]) (stmntEval stmnt >>>= lookup "_result_")
-
+        fun w pos acc -> evalSM (mkState [("_pos_", pos); ("_acc_", acc); ("_result_",0)] w ["_pos_";"_acc_";"_result_"]) (stmntEval stmnt >>>= lookup "_result_")
 
     type coord = int * int
 
@@ -193,13 +189,11 @@ module internal Eval
     type boardFun2 = coord -> Result<square option, Error>
 
     let stmntToBoardFun stmnt (m : Map<int,square>) : boardFun2 =
-        fun coord -> 
-            let x = stmntEval stmnt >>>= 
-                    lookup "_result_" |>
-                    evalSM (mkState [("_x_", fst coord); ("_y_", snd coord); ("_result_", 0)] [] ["_x_"; "_y_"; "_result_"])
-            match x with
-            | Success i -> Success (m.TryFind i)
-            | _ -> failwith "stmntToBoardFun failed."
+        fun coord ->
+            (stmntEval stmnt >>>= 
+            lookup "_result_" >>=
+            fun res -> m.TryFind res |> ret) |>
+            evalSM (mkState [("_x_", fst coord); ("_y_", snd coord); ("_result_", 0)] word.Empty ["_x_"; "_y_"; "_result_"])
 
     type board = {
         center        : coord
