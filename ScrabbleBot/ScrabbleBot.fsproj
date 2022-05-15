@@ -33,7 +33,7 @@
     <Compile Include="Points.fs" />
     <Compile Include="BestMove.fsi" />
     <Compile Include="BestMove.fs" />
-    <Compile Include="DickSplitter.fs" />
+    <Compile Include="DictSplitter.fs" />
     <Compile Include="Scrabble.fsi" />
     <Compile Include="Scrabble.fs" />
   </ItemGroup>

@@ -77,7 +77,7 @@ module State =
 
 module Scrabble =
     let playGame cstream pieces (st : State.state) =
-        let dictPath = ("Dictionaries/English.txt")
+        let dictPath = "Dictionaries/English.txt"
         printfn "%s" dictPath;
         let dicts = (DickSplitter.splitDictionary dictPath)
 
