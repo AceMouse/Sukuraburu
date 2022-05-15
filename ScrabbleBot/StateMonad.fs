@@ -1,7 +1,4 @@
-﻿// Insert your StateMonad.fs from Assignment 6 here. All modules must be internal.
-
-
-module internal StateMonad
+﻿module internal StateMonad
 
     type Error = 
         | VarExists of string
@@ -49,18 +46,16 @@ module internal StateMonad
         S (fun s -> Success ((), {s with vars = Map.empty :: s.vars}))
 
     let pop : SM<unit> =
-        S (fun s -> Success((),{s with vars = s.vars.GetSlice (Some 1, Some (s.vars.Length-1)) }))
+        (S (fun s -> Success((), { s with vars = s.vars.Tail})))
 
     let wordLength : SM<int> =
         S (fun s -> Success(s.word.Length, s))
 
-    let getPos f pos =
-        S (fun s ->
-            if pos < s.word.Length && pos >= 0 then
-                Success(f <| s.word.Item pos, s)
-            else
-                Failure(IndexOutOfBounds pos)
-        )
+    let getPos f pos = S (fun s ->
+        if pos < s.word.Length && pos >= 0
+        then Success(f <| s.word.Item pos, s)
+        else Failure(IndexOutOfBounds pos))
+    
     let characterValue (pos : int) : SM<char> =
         getPos fst pos
 
@@ -82,6 +77,23 @@ module internal StateMonad
               | None   -> Failure (VarNotFound x))
 
     let declare (var : string) : SM<unit> =
-        S (fun s -> Success((), {s with vars = (Map.add var 0 s.vars.Head) :: s.vars.Tail}))
+        S (fun s ->
+            match s.vars, s.reserved with
+            | _, res when res.Contains var -> Failure (ReservedName var)
+            | vars, _ when vars.Head.ContainsKey var -> Failure (VarExists var)
+            | vars, _ -> Success ((), {s with vars = (Map.add var 0 vars.Head)::vars})
+        )
+    
     let update (var : string) (value : int) : SM<unit> =
-        S (fun s -> Success((), {s with vars = (Map.add var value s.vars.Head) :: s.vars.Tail}))
+        let rec aux lst = function
+            | []      -> None
+            | m :: ms ->
+                match Map.containsKey var m with
+                | true  -> Some ((List.rev lst) @ ((Map.add var value m) :: ms))
+                | false -> aux (m::lst) ms
+
+        S (fun s -> 
+              match aux List.Empty s.vars with
+              | Some l -> Success ((), {s with vars = l })
+              | None   -> Failure (VarNotFound var))
+        
