@@ -41,7 +41,7 @@ let main argv =
 //    let board      = ScrabbleUtil.HoleBoard.holeBoard ()
 //    let board      = ScrabbleUtil.InfiniteHoleBoard.infiniteHoleBoard ()
 
-    let words     = readLines "../../../Dictionaries/English.txt"
+    let words     = readLines "Dictionaries/English.txt"
 
     let handSize   = 7u
     let timeout    = None
@@ -67,7 +67,7 @@ let main argv =
           board dictionary handSize timeout tiles seed port players
     
     
-    let dictPath = (Directory.GetCurrentDirectory() + "/../../../../ScrabbleBot/Dictionaries/English.txt")
+    let dictPath = "Dictionaries/English.txt"
     let a = ScrabbleUtil.Dictionary.test <| (File.ReadAllLines dictPath) <| 2 <|(dictionary true)
     a |> string |> System.Console.WriteLine
     ScrabbleUtil.DebugPrint.forcePrint ("Server has terminated. Press Enter to exit program.\n")
