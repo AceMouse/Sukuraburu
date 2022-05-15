@@ -22,4 +22,5 @@ module ScrabbleBot.Points
     //let calculate = z
     
     let getMovePoints (move:((int*int)*(uint32*(char*int))) list) placedTiles : int=
-        List.sumBy (fun (_,(_,(_,p))) -> p) move         
+        (List.sumBy (fun (_,(_,(_,p))) -> p) move) + if move.Length = 7 then 50 else 0
+        
