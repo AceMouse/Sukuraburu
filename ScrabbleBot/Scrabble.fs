@@ -87,21 +87,23 @@ module Scrabble =
                                     forcePrint "calculating... \n"
                                     Print.printHand pieces (State.hand st)
                                     let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces) 
-                                    if not move.IsEmpty then 
+                                    if not move.IsEmpty then
+                                        //if we find a valid move we play it
                                         forcePrint (sprintf "done!\n found move %A" move)
                                         debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                                         send cstream (SMPlay move)
                                         
                                         debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                                         (Some(move), None)   
-                                    else if (st.tilesLeft > 0) then
+                                    else if (st.tilesLeft >= 7) then
+                                        //else if we are allowed to change our hand we change it all
                                         forcePrint "Changing tiles\n\n"
-                                        //let input =  System.Console.ReadLine()
                                         let change = List.map fst (MultiSet.toList st.hand pieces)
-                                        send cstream (SMChange  change.[0.. (min 7 st.tilesLeft)-1])
+                                        send cstream (SMChange  change)
                                         debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) change) // keep the debug lines. They are useful.
                                         (None, Some(change))
                                     else
+                                        //if we can not find a valid move and there are not enough tiles to make it legal to exchange tiles we pass
                                         send cstream SMPass
                                         (None, None)
                                         
@@ -175,16 +177,14 @@ module Scrabble =
                 aux st'
             | RCM (CMChange(pid, numTiles)) ->
                 let st' = {st with
-                                playerTurn = nextPlayer st (pid |> int)
-                                tilesLeft = st.tilesLeft-(numTiles|>int)}
+                                playerTurn = nextPlayer st (pid |> int)}
                 aux st'
             | RCM (CMChangeSuccess newTiles) ->
                 let reducedHand = removePieces st.hand change.Value
                 let newHand = addPieces 0 reducedHand newTiles
                 let st' = {st with
                                playerTurn = nextPlayer st (st.playerTurn |> int)
-                               hand = newHand
-                               tilesLeft = st.tilesLeft-change.Value.Length}  // This state needs to be updated
+                               hand = newHand}  // This state needs to be updated
                 aux st'
             | RCM (CMForfeit pid) ->
                 let st' = {st with
