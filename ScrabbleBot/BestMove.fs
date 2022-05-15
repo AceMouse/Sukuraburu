@@ -139,7 +139,7 @@ module internal BestMove
         let adjSet = Set.ofList adj
         
         let rec aux (startSquares: ((int*int)*int) list) (down : bool)  =
-            Array.map
+            Array.Parallel.map
                 (
                  fun (coord, minlen) ->
                     if down then
