@@ -1,5 +1,9 @@
 
-module ScrabbleBot.Points
+module internal ScrabbleBot.Points
+
+    open Eval
+    open StateMonad
+
     // a 1 -> DL
     // b 2 -> TL
     // c 3 -> DW
@@ -19,8 +23,28 @@ module ScrabbleBot.Points
             tilePoints usedMask hand lst (i+1)
         else
             lst
-    let calculate : ((int * int) * (uint32 * (char * int))) list = 
+            
+    let calculatePoints (squares : square list) (word : word) =
+            // Partially apply square functions to word
+            let partiallyApplied = List.mapi (fun i x -> List.map (fun (p,sf) -> (p, sf word i)) (Map.toList x)) squares
+            // Flatten lists into a single list
+            let flattened = List.fold (fun s t -> s @ t) [] partiallyApplied
+            // Sort by priority
+            let sorted = List.sortBy fst flattened
+            // Discard priority
+            let squareFunctions = List.map snd sorted
+            // Map function to get result
+            let squareFunctions = List.map (fun x -> fun t ->
+                                            match x t with
+                                            | Success v -> v
+                                            | Failure _ -> 0
+                                    ) squareFunctions
+            
+            // Compose square functions
+            let composedFunction = List.fold (fun s f -> s >> f) id squareFunctions
+            composedFunction 0
+            
     
-    let getMovePoints (move:((int*int)*(uint32*(char*int))) list) placedTiles : int=
+    let getMovePoints (move:((int*int)*(uint32*(char*int))) list) placedTiles : int = 
         (List.sumBy (fun (_,(_,(_,p))) -> p) move) + if move.Length = 7 then 50 else 0
         
