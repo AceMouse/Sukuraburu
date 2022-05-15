@@ -1,11 +1,14 @@
-module ScrabbleBot.Points
 
+module ScrabbleBot.Points
     // a -> DL
     // b -> TL
     // c -> DW
     // d -> TW
-    
-    let rec tilePoints (usedMask:byte) (hand : (uint32 * Set<char*int>) list) lst i = 
+    let printHand (hand : (uint32 * Set<char*int>) list) =
+        hand |>
+        List.fold (fun _ (i, s) -> System.Console.WriteLine (sprintf "%d -> (%A)" i s )) ()
+    let rec tilePoints (usedMask:byte) (hand : (uint32 * Set<char*int>) list) lst i =
+                    //printHand hand
                     if (((usedMask &&& (1uy<<<i)) = 0uy) && (i < hand.Length))
                     then
                         let setList = hand[i] |> snd |> Set.toList
@@ -17,3 +20,6 @@ module ScrabbleBot.Points
                     else
                         lst
     //let calculate = z
+    
+    let getMovePoints move placedTiles : int=
+        List.length move         

@@ -44,16 +44,16 @@ module internal BestMove
                                  (dict : Dictionary.Dict) (legalDict : Dictionary.Dict) (hand : (uint32 * Set<char*int>) list)
                                  (adj: Set<int*int>)
                                  d r
-                                 (infinite : bool)
+                                 (first : bool)
                                  : ((int*int) * (uint32 * (char*int))) list * int
         =
         if placedTiles.ContainsKey ((fst coord) - r, (snd coord) - d)
         then ([],-1000)
         else
-            let used = 0uy
-            let rec aux (acc:int) coord (hand : (uint32 * Set<char*int>) list)
-                                  (usedMask : byte) (dict : Dictionary.Dict)
-                                  : bool * (((int*int) * (uint32 * (char*int))) list * int)
+            let rec aux coord (hand : (uint32 * Set<char*int>) list)
+                          (usedMask : byte) (dict : Dictionary.Dict)
+                          (move : ((int*int) * (uint32 * (char*int))) list)
+                          : (((int*int) * (uint32 * (char*int))) list * int)
                 =
                 let rec toBegining coord d r =
                     let x, y = coord
@@ -73,42 +73,49 @@ module internal BestMove
                         | false -> if (x+d*i,y+r*i) = coord then (ch |> string) + (aux (i + 1)) else ""
                     let word = (aux 0)
                     word.Length < 2 || not (Dictionary.lookup word legalDict)
-                let outOfBounds (x,y) =
-                     (not infinite) && (x > 7 || x < -7 || y > 7 || y < -7)  
+                    
+                
                     
                 let toExplore = Points.tilePoints usedMask hand [] 0
-                let rec explore j =
-                    (*if outOfBounds coord then
-                        [(false,([], 0 ))]
-                    else*)
-                    if (j >= toExplore.Length) then
-                        [(false,([], -1000 ))]
-                    else 
-                        let idx, defTile = toExplore[j]
-                        let tile = (Option.defaultValue defTile (placedTiles.TryFind coord))
-                        let placed = placedTiles.ContainsKey coord
-                        let id,(ch,pts) = tile
-                        if adj.Contains coord && illegal ch coord d r then (false,([],if placed then -1000 else 0)):: if j < toExplore.Length-1 then explore (j+1) else List.empty
-                        else
-                            let n = (Dictionary.step ch) dict
-                            match n with
-                            | None ->
-                                let ret = (false,([],if placed then -1000 else 0)):: if j < toExplore.Length-1 then explore (j+1) else List.empty
-                                ret
-                            | Some (b, dict) ->
-                                let x,y = coord
-                                let nc = (x+r, y+d)
-                                let ret = (aux (acc + pts) nc hand (if placed then usedMask else (usedMask ||| (1uy<<<idx))) dict)
-                                let add = (b || (ret|>fst))
-                                let s = ret |> snd |> fst 
-                                let p = ret |> snd |> snd
-                                let ret = (add,((if add && not placed then ((x,y),(id,(ch,pts)))::s else s), (if add then p + pts else p))):: if j < toExplore.Length-1 then explore (j+1) else List.empty
-                                ret
+                let explore =
+                    let folder =
+                        fun (s: ((int*int) * (uint32 * (char*int))) list * int) (idx, (id,(ch,pts))) ->
+                            //is there a tile placed at coord
+                            let placed = placedTiles.ContainsKey coord
+                            //tile is toExplore[i] unless there is already one placed
+                            let id,(ch,pts) = Option.defaultValue  (id,(ch,pts)) (placedTiles.TryFind coord)
+                            // are we adjacent to an already placed til
+                            let adjacent = adj.Contains coord
+                            //if so we check if the crossing word is legal
+                            if adjacent && illegal ch coord d r then
+                                //if it is not we return with a previously discovered move
+                                s
+                            else
+                                // else we step forwards
+                                let n = Dictionary.step ch dict
+                                match n with
+                                | None ->
+                                    // if a word does not continue with ch we return a previously discovered move
+                                    s
+                                | Some (b, dict) ->
+                                    // if a word continues with ch
+                                    let x, y = coord
+                                    // if ch was not already placed we place it, we make sure to add it to the current move and mark it as used in the hand
+                                    let move = move @ if not placed then [(coord, (id,(ch,pts)))] else []
+                                    let usedMask = if not placed then (usedMask|||(1uy<<<(int idx))) else usedMask
+                                    //then we return the best move out of:
+                                    // 1. the previous best
+                                    // 2. the one we get if we continue the word with ch
+                                    // 3. the one we get if we end on ch (only available if step resulted in a word ending on ch and there is not an already placed tile directly following ch)
+                                    let lst = [s; aux (x+r,y+d) hand usedMask dict move] @
+                                              if b && (not (placedTiles.ContainsKey (x+r,y+d))) then [(move, Points.getMovePoints move placedTiles)] else []
+                                    List.maxBy snd lst 
+                            
+                    List.fold folder ([], 0) toExplore
+                    
+                explore
                 
-                List.maxBy snd (explore 0)
-                        
-            let ret = (aux 0 coord hand used dict) |> snd
-            ret 
+            aux coord hand 0uy dict []
     
     let processDown coord minLen (placedTiles : Map<int*int, uint32 * (char*int)>)
                           (dicts : Dictionary.Dict list)
@@ -136,7 +143,7 @@ module internal BestMove
         let adjSet = Set.ofList adj
         
         let rec aux (startSquares: ((int*int)*int) list) (down : bool)  =
-            Array.Parallel.map
+            Array.map
                 (
                  fun (coord, minlen) ->
                     if down then
@@ -150,35 +157,7 @@ module internal BestMove
         // dir : Down = true, Right = false
         
         let right, down = if placedTiles.IsEmpty then startingSquares [board.center] else (startingSquares adj)
-        let arr = Array2D.create 16 16 -1
-        let rightlen =  (List.length right) - 1
-        for i in 0.. rightlen do
-            let (x, y), len = right.Item i
-            let inbounds x = x <= 7 && x >= -8 
-            if inbounds x && inbounds y then
-                arr[y+8,x+8] <- len*10
         
-        for y in 0.. 15 do
-            for x in 0.. 15 do
-                System.Console.Write arr[y,x]
-                System.Console.Write " "
-            System.Console.Write "\n"
-            
-        let arr = Array2D.create 16 16 -1
-        let downlen =  (List.length down) - 1
-        for i in 0.. downlen do
-            let (x, y), len = down.Item i
-            let inbounds x = x <= 7 && x >= -8 
-            if inbounds x && inbounds y then
-                arr[y+8,x+8] <- len*10
-        System.Console.WriteLine "\n----------------"
-        for y in 0.. 15 do
-            for x in 0.. 15 do
-                System.Console.Write arr[y,x]
-                System.Console.Write " "
-            System.Console.Write "\n"
-            
-            
         let rlst = aux right false
         let dlst = aux down true
         

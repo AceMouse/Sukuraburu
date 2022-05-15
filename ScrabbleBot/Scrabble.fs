@@ -1,5 +1,6 @@
 ﻿namespace Sukuraburu
 
+open System
 open System.Runtime.InteropServices.ComTypes
 open Parser
 open ScrabbleBot
@@ -46,7 +47,7 @@ module RegEx =
 
     let printHand pieces hand =
         hand |>
-        MultiSet.fold (fun _ x i -> forcePrint (sprintf "%d -> (%A, %d)\n" x (Map.find x pieces) i)) ()
+        MultiSet.fold (fun _ x i -> System.Console.Write (sprintf "%d -> (%A, %d)\n" x (Map.find x pieces) i)) ()
 
 module State = 
     // Make sure to keep your state localised in this module. It makes your life a whole lot easier.
@@ -74,55 +75,17 @@ module State =
     let hand st          = st.hand
 
 module Scrabble =
-    let playGame cstream pieces (st : State.state) Infinite =
+    let playGame cstream pieces (st : State.state) infinite =
         let dictPath = (Directory.GetCurrentDirectory() + "/../../../../ScrabbleBot/Dictionaries/English.txt")
         printfn "%s" dictPath;
         let dicts = (DickSplitter.splitDictionary dictPath)
 
         let rec aux (st : State.state) =
-            (*let move, change = 
-                //if st.playerNumber = st.playerTurn then
-                    Print.printHand pieces (State.hand st)
-                    System.Console.WriteLine st.hand
-                    System.Console.WriteLine "Move or Change or Forfeit or Pass?(m|c|f|p)\n\n"
-                    let action = 'm'//System.Console.ReadLine()[0]
-                    // remove the force print when you move on from manual input (or when you have learnt the format)
-                    match action with
-                    | 'c' ->
-                        forcePrint "Input change (format '(<id> )*')\n\n"
-                        let input =  System.Console.ReadLine()
-                        let change = RegEx.parseChange input
-                        send cstream (SMChange change)
-                        debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) change) // keep the debug lines. They are useful.
-                        (None, Some(change))
-                    | 'f' ->
-                        forcePrint "Forfeited!\n\n"
-                        send cstream SMForfeit
-                        (None, None)
-                    | 'p' ->
-                        forcePrint "Passed!\n\n"
-                        send cstream SMPass
-                        (None, None)
-                    | _ ->
-                        
-                        //forcePrint "Input move (format '(<x-coordinate> <y-coordinate> <piece id><character><point-value> )*', note the absence of space between the last inputs)\n\n"
-                        //let input =  System.Console.ReadLine()
-                        //let move = RegEx.parseMove input
-                        forcePrint "calculating... \n"
-                        
-                        let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces) Infinite
-                        forcePrint (sprintf "done!\n found move %A" move)
-                        debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-                        send cstream (SMPlay move)
-                        
-                        debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
-                        (Some(move), None)    
-                //else
-                    //(None, None)*)
+            
             let move, change = if st.playerTurn = st.playerNumber then
                                     forcePrint "calculating... \n"
-                                                
-                                    let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces) Infinite
+                                    Print.printHand pieces (State.hand st)
+                                    let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces) infinite
                                     if not move.IsEmpty then 
                                         forcePrint (sprintf "done!\n found move %A" move)
                                         debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
@@ -172,10 +135,6 @@ module Scrabble =
                 match tiles with
                 | [] -> placedTiles
                 | (k,v)::l -> Map.add k v (placeTiles placedTiles l)
-            
-            
-            
-            
             
             match msg with
             | RCM (CMPlaySuccess(move, points, newPieces)) ->
