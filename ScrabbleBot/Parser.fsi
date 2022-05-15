@@ -3,7 +3,6 @@
 module internal Parser
     
     open ScrabbleUtil
-    open StateMonad
     open Eval
             
     type board = {

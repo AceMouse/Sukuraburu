@@ -1,19 +1,8 @@
-﻿// ScrabbleUtil contains the types coord, boardProg, and SquareProg. Remove these from your file before proceeding.
-// Also note that the modulse Ass7 and ImpParser have been merged to one module called Parser.
-
-// Insert your Parser.fs file here from Assignment 7. All modules must be internal.
-
-module internal Parser
+﻿module internal Parser
     open ScrabbleUtil // NEW. KEEP THIS LINE.
     open Eval
     open FParsecLight.TextParser     // Industrial parser-combinator library. Use for Scrabble Project.
 
-    (*
-
-    The interfaces for JParsec and FParsecLight are identical and the implementations should always produce the same output
-    for successful parses although running times and error messages will differ. Please report any inconsistencies.
-
-    *)
     let pIntToChar  = pstring "intToChar"
     let pPointValue = pstring "pointValue"
 
@@ -34,6 +23,7 @@ module internal Parser
     let pwhile    = pstring "while"
     let pdo       = pstring "do"
     let pdeclare  = pstring "declare"
+    let pprint = pstring "print"
 
     let whitespaceChar = satisfy System.Char.IsWhiteSpace <?> "whitespace"
     let pletter        = satisfy System.Char.IsLetter <?> "letter"
@@ -53,6 +43,7 @@ module internal Parser
 
     let pid = (pletter <|> pchar '_') .>>. many (palphanumeric <|> pchar '_') |>> (fun (x,xs) -> x::xs) |>> List.toArray |>> System.String
 
+    let str = pchar '\"' >>. many (palphanumeric <|> whitespaceChar) .>> pchar '\"' |>> List.toArray |>> System.String
     
     let unop op a = op >*>. a
     let binop op p1 p2 = p1 .>*> op .>*>. p2 
@@ -98,8 +89,8 @@ module internal Parser
     let TruParser = pTrue |>> (fun _ -> TT) <?> "TT"
     let FlsParser = pFalse |>> (fun _ -> FF) <?> "FF"
     let BParParse = parenthesise BTermParse <?> "Par"
-    let AndParser =  BProdParse .>*> pstring @"/\" .>*>. BProdParse |>> Conj <?> "Conj"
-    let OrParser =  BProdParse .>*> pstring @"\/" .>*>. BProdParse |>> (fun (a,b) -> ((.||.) a b)) <?> "Disj"
+    let AndParser =  BProdParse .>*> pstring @"/\" .>*>. BTermParse |>> Conj <?> "Conj"
+    let OrParser =  BProdParse .>*> pstring @"\/" .>*>. BTermParse |>> (fun (a,b) -> ((.||.) a b)) <?> "Disj"
     let AEqParser = AexpParse .>*> pchar '=' .>*>. AexpParse |>> AEq <?> "AEq"
     let ANEqParser =  AexpParse .>*> pstring "<>" .>*>. AexpParse |>> (fun (a,b) -> ((.<>.) a b)) <?> "ANEq"
     let ALTParser =  AexpParse .>*> pchar '<' .>*>. AexpParse |>> (fun (a,b) -> ((.<.) a b)) <?> "ALT"
@@ -119,16 +110,18 @@ module internal Parser
     let stmntParser, sref = createParserForwardedToRef<stm>()
     let stmntSeqParser, seqref = createParserForwardedToRef<stm>()
     
+    let PrintParse = pprint >>. spaces1 >>. str |>> Print <?> "Print"
+    let PrintVarParse = pprint >>. spaces1 >>. pid |>> PrintVar <?> "PrintVar"
     let DeclareParser = pdeclare >>. spaces1 >>. pid |>> Declare <?> "Declare"
     let AssParser = pid .>*> pstring ":=" .>*>. TermParse |>> Ass <?> "Ass"
     let SeqParser = stmntSeqParser .>*> pchar ';' .>*>. stmntParser |>> Seq <?> "Seq"
-    let ITEParser = pif >*>. BParParse .>*> pthen .>*>. curlysise stmntParser .>*> pelse .>*>. curlysise stmntParser |>> (fun ((b, st1), st2) -> ITE (b, st1, st2)) <?> "ITE"
-    let ITParser = pif >*>. BParParse .>*> pthen .>*>. curlysise stmntParser |>> (fun (x, y) -> ITE (x, y, Skip)) <?> "IT"
-    let WhileParser = pwhile >*>. parenthesise BTermParse .>*> pdo .>*>. curlysise stmntParser |>> While <?> "While"
+    let ITEParser = pif >*>. parenthesise BexpParse .>*> pthen .>*>. curlysise stmntParser .>*> pelse .>*>. curlysise stmntParser |>> (fun ((b, st1), st2) -> ITE (b, st1, st2)) <?> "ITE"
+    let ITParser = pif >*>. parenthesise BexpParse .>*> pthen .>*>. curlysise stmntParser |>> (fun (x, y) -> ITE (x, y, Skip)) <?> "IT"
+    let WhileParser = pwhile >*>. parenthesise BexpParse .>*> pdo .>*>. curlysise stmntParser |>> While <?> "While"
     let SkipParse = pstring "Skip" |>> (fun _ -> Skip) <?> "Skip"
     
     do sref.Value <- choice [SeqParser; stmntSeqParser] 
-    do seqref.Value <- choice [AssParser; DeclareParser; ITEParser; ITParser; WhileParser; SkipParse]
+    do seqref.Value <- choice [AssParser; PrintParse; PrintVarParse; DeclareParser; ITEParser; ITParser; WhileParser; SkipParse]
 
     (* The rest of your parser goes here *)
     
@@ -144,7 +137,7 @@ module internal Parser
         squares       : boardFun2
     }
     
-    let mkBoard (prog:boardProg) : board = 
+    let mkBoard (prog : boardProg) : board = 
         {
             center = prog.center
             defaultSquare = Map.find prog.usedSquare (Map.map (fun _ -> parseSquareProg) prog.squares)

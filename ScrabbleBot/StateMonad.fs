@@ -97,3 +97,19 @@
               | Some l -> Success ((), {s with vars = l })
               | None   -> Failure (VarNotFound var))
         
+    let print (str : string) (isVar: bool) : SM<unit> =
+        let rec aux lst = function
+        | []      -> None
+        | m :: ms ->
+            match Map.containsKey str m with
+            | true  -> Some (m.Item str)
+            | false -> aux (m::lst) ms
+            
+        S (fun s ->
+          if isVar then
+              match aux List.Empty s.vars with
+              | Some i -> printf "%d" i
+                          Success ((), s)
+              | None   -> Failure (VarNotFound str)
+          else printf "%s" str
+               Success ((), s))

@@ -141,6 +141,8 @@ module internal Eval
     
     type stm =                (* statements *)
     | Declare of string       (* variable declaration *)
+    | Print of string         (* print alphanumerical string *)
+    | PrintVar of string      (* print variable value *)
     | Ass of string * aExp    (* variable assignment *)
     | Skip                    (* nop *)
     | Seq of stm * stm        (* sequential composition *)
@@ -150,11 +152,13 @@ module internal Eval
     let rec stmntEval stmnt : SM<unit> =
         match stmnt with
             | Declare s -> declare s
+            | Print s -> print s false
+            | PrintVar s -> print s true
             | Ass(s, aExp) -> arithEval aExp >>= update s 
             | Skip -> ret()
             | Seq (st1, st2) -> stmntEval st1 >>>= stmntEval st2
             | ITE (b, st1, st2) -> boolEval b >>= fun b -> if b then push >>>= stmntEval st1 >>>= pop else push >>>= stmntEval st2 >>>= pop
-            | While (b, st) -> boolEval b >>= fun b1 -> if b1 then push >>>= stmntEval (Seq(st, While(b, st))) >>>= pop else ret ()                            
+            | While (b, st) -> boolEval b >>= fun b1 -> if b1 then push >>>= stmntEval (Seq(st, While(b, st))) >>>= pop else ret ()
     
 (* Part 3 (Optional) *)
 
@@ -171,7 +175,6 @@ module internal Eval
     let arithEval2 a = failwith "Not implemented"
     let charEval2 c = failwith "Not implemented"
     let rec boolEval2 b = failwith "Not implemented"
-
     let stmntEval2 stm = failwith "Not implemented"
 
 (* Part 4 *) 

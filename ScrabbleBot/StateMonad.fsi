@@ -29,6 +29,7 @@
     val lookup  : string -> SM<int>
     val update  : string -> int -> SM<unit>
     val declare : string -> SM<unit>
+    val print : string -> bool -> SM<unit>
 
     val wordLength     : SM<int>
     val characterValue : int -> SM<char>
