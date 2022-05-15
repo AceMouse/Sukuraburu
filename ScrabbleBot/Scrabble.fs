@@ -75,7 +75,7 @@ module State =
     let hand st          = st.hand
 
 module Scrabble =
-    let playGame cstream pieces (st : State.state) infinite =
+    let playGame cstream pieces (st : State.state) =
         let dictPath = (Directory.GetCurrentDirectory() + "/../../../../ScrabbleBot/Dictionaries/English.txt")
         printfn "%s" dictPath;
         let dicts = (DickSplitter.splitDictionary dictPath)
@@ -85,7 +85,7 @@ module Scrabble =
             let move, change = if st.playerTurn = st.playerNumber then
                                     forcePrint "calculating... \n"
                                     Print.printHand pieces (State.hand st)
-                                    let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces) infinite
+                                    let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces) 
                                     if not move.IsEmpty then 
                                         forcePrint (sprintf "done!\n found move %A" move)
                                         debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
@@ -235,5 +235,5 @@ module Scrabble =
         aux -7
         
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
-        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet playerTurn numPlayers (List.init (numPlayers |> int) (fun _ -> true)) (List.ofArray (Array.zeroCreate (numPlayers |> int))) Map.empty) boardP.isInfinite
+        fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet playerTurn numPlayers (List.init (numPlayers |> int) (fun _ -> true)) (List.ofArray (Array.zeroCreate (numPlayers |> int))) Map.empty)
         

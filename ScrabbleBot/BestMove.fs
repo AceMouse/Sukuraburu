@@ -44,7 +44,6 @@ module internal BestMove
                                  (dict : Dictionary.Dict) (legalDict : Dictionary.Dict) (hand : (uint32 * Set<char*int>) list)
                                  (adj: Set<int*int>)
                                  d r
-                                 (first : bool)
                                  : ((int*int) * (uint32 * (char*int))) list * int
         =
         if placedTiles.ContainsKey ((fst coord) - r, (snd coord) - d)
@@ -122,22 +121,19 @@ module internal BestMove
                           (dict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
-                          (infinite: bool)
                           : ((int*int) * (uint32 * (char*int))) list * int
-        = processInDirection coord placedTiles dicts[minLen] dict hand adj 1 0 infinite
+        = processInDirection coord placedTiles dicts[minLen] dict hand adj 1 0 
         
     let processRight coord minLen (placedTiles : Map<int*int, uint32 * (char*int)>)
                           (dicts : Dictionary.Dict list)
                           (dict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
-                          (infinite : bool)
                           : ((int*int) * (uint32 * (char*int))) list * int
-        = processInDirection coord placedTiles dicts[minLen] dict hand adj 0 1 infinite
+        = processInDirection coord placedTiles dicts[minLen] dict hand adj 0 1 
         
     let suggestMove (board : Parser.board) (placedTiles : Map<int*int, uint32 * (char*int)>)
                     (dicts : Dictionary.Dict list) (hand : (uint32 * Set<char*int>) list)
-                    (infinite: bool)
         =
         let adj = adjSquares placedTiles
         let adjSet = Set.ofList adj
@@ -147,9 +143,9 @@ module internal BestMove
                 (
                  fun (coord, minlen) ->
                     if down then
-                        processDown coord minlen placedTiles dicts dicts[0] hand adjSet infinite
+                        processDown coord minlen placedTiles dicts dicts[0] hand adjSet 
                     else
-                        processRight coord minlen placedTiles dicts dicts[0] hand adjSet infinite
+                        processRight coord minlen placedTiles dicts dicts[0] hand adjSet 
                 )
                 (List.toArray startSquares)  
             
