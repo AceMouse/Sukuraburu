@@ -65,9 +65,10 @@ module State =
         notForfeited  : bool list
         points        : int list
         placedTiles   : Map<(int * int),(uint32*(char*int))>
+        tilesLeft     : int       
     }
 
-    let mkState b d pn h pt pc nff p ptl = {board = b; dict = d;  playerNumber = pn; hand = h; playerTurn = pt; playerCount = pc; notForfeited = nff; points = p; placedTiles = ptl}
+    let mkState b d pn h pt pc nff p ptl = {board = b; dict = d;  playerNumber = pn; hand = h; playerTurn = pt; playerCount = pc; notForfeited = nff; points = p; placedTiles = ptl; tilesLeft = 86}
 
     let board st         = st.board
     let dict st          = st.dict
@@ -93,13 +94,17 @@ module Scrabble =
                                         
                                         debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                                         (Some(move), None)   
-                                    else
+                                    else if (st.tilesLeft > 0) then
                                         forcePrint "Changing tiles\n\n"
                                         //let input =  System.Console.ReadLine()
                                         let change = List.map fst (MultiSet.toList st.hand pieces)
-                                        send cstream (SMChange change)
+                                        send cstream (SMChange  change.[0.. (min 7 st.tilesLeft)-1])
                                         debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) change) // keep the debug lines. They are useful.
                                         (None, Some(change))
+                                    else
+                                        send cstream SMPass
+                                        (None, None)
+                                        
                                 else
                                     (None, None)
             let msg = recv cstream
@@ -117,11 +122,14 @@ module Scrabble =
                 aux 0
                     
             let rec addPieces i hand (pieces : (uint32 * uint32) list)=
-                let id, amount = pieces[i]
-                if (i < pieces.Length-1) then
-                    addPieces (i+1) (MultiSet.add id amount hand) pieces
-                else
-                    (MultiSet.add id amount hand)
+                if i = pieces.Length then
+                    hand
+                else 
+                    let id, amount = pieces[i]
+                    if (i < pieces.Length-1) then
+                        addPieces (i+1) (MultiSet.add id amount hand) pieces
+                    else
+                        (MultiSet.add id amount hand)
                     
             let nextPlayer (st:State.state) curPlayer =
                 let player = (curPlayer |> uint32) - 1u
@@ -149,7 +157,8 @@ module Scrabble =
                                playerTurn = nextPlayer st (st.playerTurn |> int)
                                hand = newHand
                                points = List.mapi (fun i v -> if i = (st.playerNumber |> int) then v + points else v) st.points
-                               placedTiles = placeTiles st.placedTiles move}  // This state needs to be updated
+                               placedTiles = placeTiles st.placedTiles move
+                               tilesLeft = st.tilesLeft-move.Length}  
                 
                 aux st'
             | RCM (CMPlayed (pid, ms, points)) ->
@@ -158,20 +167,24 @@ module Scrabble =
                 let st' = {st with
                                playerTurn = nextPlayer st (st.playerTurn |> int)
                                points = List.mapi (fun i v -> if i = (pid |> int) then v + points else v) st.points
-                               placedTiles = newPlacedTiles}  // This state needs to be updated
+                               placedTiles = newPlacedTiles
+                               tilesLeft = st.tilesLeft-ms.Length}  // This state needs to be updated
                 aux st'
             | RCM (CMPassed pid) ->
                 let st' = {st with playerTurn = nextPlayer st (pid |> int)}  // This state needs to be updated
                 aux st'
             | RCM (CMChange(pid, numTiles)) ->
-                let st' = {st with playerTurn = nextPlayer st (pid |> int)}  // This state needs to be updated
+                let st' = {st with
+                                playerTurn = nextPlayer st (pid |> int)
+                                tilesLeft = st.tilesLeft-(numTiles|>int)}
                 aux st'
             | RCM (CMChangeSuccess newTiles) ->
                 let reducedHand = removePieces st.hand change.Value
-                let newHand = addPieces 0 (reducedHand) newTiles
+                let newHand = addPieces 0 reducedHand newTiles
                 let st' = {st with
                                playerTurn = nextPlayer st (st.playerTurn |> int)
-                               hand = newHand}  // This state needs to be updated
+                               hand = newHand
+                               tilesLeft = st.tilesLeft-change.Value.Length}  // This state needs to be updated
                 aux st'
             | RCM (CMForfeit pid) ->
                 let st' = {st with
