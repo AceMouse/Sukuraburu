@@ -4,6 +4,7 @@ module internal BestMove
     open Microsoft.FSharp.Collections
     open ScrabbleBot
     open Microsoft.FSharp.Linq
+    open ScrabbleUtil
     
     let adjSquares (placedTiles : Map<int*int, uint32 * (char*int)>)
         =
@@ -73,7 +74,15 @@ module internal BestMove
                     let word = (aux 0)
                     word.Length < 2 || not (Dictionary.lookup word legalDict)
                     
-                
+                let rec getWordStartingHere m coord d r : Eval.word =
+                    let x, y = coord
+                    let rec aux i = 
+                        match (placedTiles.ContainsKey (x+r*i,y+d*i)) with
+                        | true -> (Map.find (x+r*i,y+d*i) m |> snd) :: aux (i + 1)
+                        | false -> []
+                    aux 0 
+                    
+                    
                     
                 let toExplore = Points.tilePoints usedMask hand [] 0
                 let explore =
@@ -107,7 +116,14 @@ module internal BestMove
                                     // 2. the one we get if we continue the word with ch
                                     // 3. the one we get if we end on ch (only available if step resulted in a word ending on ch and there is not an already placed tile directly following ch)
                                     let lst = [s; aux (x+r,y+d) hand usedMask dict move] @
-                                              if b && (not (placedTiles.ContainsKey (x+r,y+d))) then [(move, Points.getMovePoints move placedTiles)] else []
+                                              if b && (not (placedTiles.ContainsKey (x+r,y+d))) then
+                                                  let m = List.fold (fun s (coord,tile) -> Map.add coord tile s) placedTiles move
+                                                  let words = [getWordStartingHere m (move.Item 0 |> fst) d r]
+                                                  // intentional rotation shift as we are looking at crossing words
+                                                  let words = List.fold (fun words (coord,_) -> (getWordStartingHere m (toBegining coord -r -d) r d) :: words) words move
+                                                  [(move, Points.getMovePoints move words)]
+                                              else
+                                                  []
                                     List.maxBy snd lst 
                             
                     List.fold folder ([], 0) toExplore
@@ -132,8 +148,10 @@ module internal BestMove
                           : ((int*int) * (uint32 * (char*int))) list * int
         = processInDirection coord placedTiles dicts[minLen] dict hand adj 0 1 
         
-    let suggestMove (board : Parser.board) (placedTiles : Map<int*int, uint32 * (char*int)>)
-                    (dicts : Dictionary.Dict list) (hand : (uint32 * Set<char*int>) list)
+    let suggestMove (board : Parser.board)
+                    (placedTiles : Map<int*int, uint32 * (char*int)>)
+                    (dicts : Dictionary.Dict list)
+                    (hand : (uint32 * Set<char*int>) list)
         =
         let adj = adjSquares placedTiles
         let adjSet = Set.ofList adj
@@ -143,9 +161,9 @@ module internal BestMove
                 (
                  fun (coord, minlen) ->
                     if down then
-                        processDown coord minlen placedTiles dicts dicts[0] hand adjSet 
+                        processDown coord minlen placedTiles dicts dicts[0] hand adjSet
                     else
-                        processRight coord minlen placedTiles dicts dicts[0] hand adjSet 
+                        processRight coord minlen placedTiles dicts dicts[0] hand adjSet
                 )
                 (List.toArray startSquares)  
             
