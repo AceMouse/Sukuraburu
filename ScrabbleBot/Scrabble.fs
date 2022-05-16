@@ -78,18 +78,14 @@ module State =
 module Scrabble =
     let playGame cstream pieces (st : State.state) =
         let dictPath = "Dictionaries/English.txt"
-        printfn "%s" dictPath;
         let dicts = (DickSplitter.splitDictionary dictPath)
 
         let rec aux (st : State.state) =
             
             let move, change = if st.playerTurn = st.playerNumber then
-                                    forcePrint "calculating... \n"
-                                    Print.printHand pieces (State.hand st)
                                     let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces) 
                                     if not move.IsEmpty then
                                         //if we find a valid move we play it
-                                        forcePrint (sprintf "done!\n found move %A" move)
                                         debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                                         send cstream (SMPlay move)
                                         
@@ -97,7 +93,6 @@ module Scrabble =
                                         (Some(move), None)   
                                     else if (st.tilesLeft >= 7) then
                                         //else if we are allowed to change our hand we change it all
-                                        forcePrint "Changing tiles\n\n"
                                         let change = List.map fst (MultiSet.toList st.hand pieces)
                                         send cstream (SMChange  change)
                                         debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) change) // keep the debug lines. They are useful.
@@ -225,27 +220,6 @@ module Scrabble =
         //let dict = dictf true // Uncomment if using a gaddag for your dictionary
         let dict = dictf false // Uncomment if using a trie for your dictionary
         let board = Parser.mkBoard boardP
-        
-        // Prints the square at a given coordinate
-        let printSquare coord = 
-            let tt = board.squares coord
-            match tt with
-            | Success squareOption ->
-                printfn "%A = %A" coord squareOption.Value
-            | Failure error -> System.Console.WriteLine error
-        
-        // Prints the squares around the center within a given radius
-        let rec aux r =
-            let rec aux2 c =
-                printSquare (r,c)
-                if (c < 7) then
-                    aux2 (c+1) 
-            aux2 -7
-            if (r < 7) then
-                aux (r+1)
-        
-        // Print all squares around the center within a radius of 7
-        aux -7
         
         let handSet = List.fold (fun acc (x, k) -> MultiSet.add x k acc) MultiSet.empty hand
         fun () -> playGame cstream tiles (State.mkState board dict playerNumber handSet playerTurn numPlayers (List.init (numPlayers |> int) (fun _ -> true)) (List.ofArray (Array.zeroCreate (numPlayers |> int))) Map.empty)
