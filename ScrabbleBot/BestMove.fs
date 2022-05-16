@@ -3,7 +3,6 @@ module internal BestMove
     open Eval
     open Microsoft.FSharp.Collections
     open ScrabbleBot
-    open ScrabbleUtil
     
     let adjSquares (placedTiles : Map<int*int, uint32 * (char*int)>)
         =
