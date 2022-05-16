@@ -1,9 +1,8 @@
 module internal BestMove
 
-    open System.Threading.Tasks
+    open Eval
     open Microsoft.FSharp.Collections
     open ScrabbleBot
-    open Microsoft.FSharp.Linq
     open ScrabbleUtil
     
     let adjSquares (placedTiles : Map<int*int, uint32 * (char*int)>)
@@ -45,6 +44,7 @@ module internal BestMove
                                  (dict : Dictionary.Dict) (legalDict : Dictionary.Dict) (hand : (uint32 * Set<char*int>) list)
                                  (adj: Set<int*int>)
                                  d r
+                                 (boardFun2 : boardFun2)
                                  : ((int*int) * (uint32 * (char*int))) list * int
         =
         if placedTiles.ContainsKey ((fst coord) - r, (snd coord) - d)
@@ -121,7 +121,7 @@ module internal BestMove
                                                   let words = [getWordStartingHere m (move.Item 0 |> fst) d r]
                                                   // intentional rotation shift as we are looking at crossing words
                                                   let words = List.fold (fun words (coord,_) -> (getWordStartingHere m (toBegining coord -r -d) r d) :: words) words move
-                                                  [(move, Points.getMovePoints move words)]
+                                                  [(move, Points.getMovePoints boardFun2 move (Map.toList m) words)]
                                               else
                                                   []
                                     List.maxBy snd lst 
@@ -137,16 +137,18 @@ module internal BestMove
                           (dict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
+                          (squares : boardFun2)
                           : ((int*int) * (uint32 * (char*int))) list * int
-        = processInDirection coord placedTiles dicts[minLen] dict hand adj 1 0 
+        = processInDirection coord placedTiles dicts[minLen] dict hand adj 1 0 squares
         
     let processRight coord minLen (placedTiles : Map<int*int, uint32 * (char*int)>)
                           (dicts : Dictionary.Dict list)
                           (dict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
+                          (squares : boardFun2)
                           : ((int*int) * (uint32 * (char*int))) list * int
-        = processInDirection coord placedTiles dicts[minLen] dict hand adj 0 1 
+        = processInDirection coord placedTiles dicts[minLen] dict hand adj 0 1 squares
         
     let suggestMove (board : Parser.board)
                     (placedTiles : Map<int*int, uint32 * (char*int)>)
@@ -161,9 +163,9 @@ module internal BestMove
                 (
                  fun (coord, minlen) ->
                     if down then
-                        processDown coord minlen placedTiles dicts dicts[0] hand adjSet
+                        processDown coord minlen placedTiles dicts dicts[0] hand adjSet board.squares
                     else
-                        processRight coord minlen placedTiles dicts dicts[0] hand adjSet
+                        processRight coord minlen placedTiles dicts dicts[0] hand adjSet board.squares
                 )
                 (List.toArray startSquares)  
             
