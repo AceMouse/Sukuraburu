@@ -46,6 +46,7 @@ module internal ScrabbleBot.Points
             
     let getMovePoints (squares : int*int -> square) (move : ((int*int)*(uint32*(char*int))) list) (tiles : ((int * int) * (uint32 * (char * int))) list) (words : word list) : int = 
         let wordLengthPoints = if move.Length = 7 then 50 else 0
-        let squares = List.map (fun (x,_) -> squares x) tiles
+        let squares = List.map (fun (coord, _) -> squares coord) tiles
         let wordPoints = List.fold (fun s (w : word) -> if w.Length > 1 then s + (calculatePoints squares w) else s) 0 words
         wordLengthPoints + wordPoints
+        
