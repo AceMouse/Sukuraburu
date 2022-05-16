@@ -76,7 +76,7 @@ module internal BestMove
                 let rec getWordStartingHere m coord d r : Eval.word =
                     let x, y = coord
                     let rec aux i = 
-                        match (placedTiles.ContainsKey (x+r*i,y+d*i)) with
+                        match (Map.containsKey (x+r*i,y+d*i) m) with
                         | true -> (Map.find (x+r*i,y+d*i) m |> snd) :: aux (i + 1)
                         | false -> []
                     aux 0 
@@ -158,7 +158,7 @@ module internal BestMove
         let adjSet = Set.ofList adj
         
         let rec aux (startSquares: ((int*int)*int) list) (down : bool)  =
-            Array.Parallel.map
+            Array.map
                 (
                  fun (coord, minlen) ->
                     if down then

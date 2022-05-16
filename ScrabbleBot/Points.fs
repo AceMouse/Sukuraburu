@@ -50,5 +50,5 @@ module internal ScrabbleBot.Points
                                              | Success v -> v.Value
                                              | Failure _ -> failwith "Failed to get square."
                                 ) tiles
-        let wordPoints = List.fold (fun s x -> s + (calculatePoints squares x)) 0 words
+        let wordPoints = List.fold (fun s (w : word) -> if w.Length > 1 then s + (calculatePoints squares w) else s) 0 words
         wordLengthPoints + wordPoints
