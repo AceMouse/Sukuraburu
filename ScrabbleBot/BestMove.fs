@@ -43,7 +43,7 @@ module internal BestMove
                                  (dict : Dictionary.Dict) (legalDict : Dictionary.Dict) (hand : (uint32 * Set<char*int>) list)
                                  (adj: Set<int*int>)
                                  d r
-                                 (boardFun2 : boardFun2)
+                                 (squares : (int*int -> square))
                                  : ((int*int) * (uint32 * (char*int))) list * int
         =
         if placedTiles.ContainsKey ((fst coord) - r, (snd coord) - d)
@@ -120,7 +120,7 @@ module internal BestMove
                                                   let words = [getWordStartingHere m (move.Item 0 |> fst) d r]
                                                   // intentional rotation shift as we are looking at crossing words
                                                   let words = List.fold (fun words (coord,_) -> (getWordStartingHere m (toBegining coord -r -d) r d) :: words) words move
-                                                  [(move, Points.getMovePoints boardFun2 move (Map.toList m) words)]
+                                                  [(move, Points.getMovePoints squares move (Map.toList m) words)]
                                               else
                                                   []
                                     List.maxBy snd lst 
@@ -136,7 +136,7 @@ module internal BestMove
                           (dict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
-                          (squares : boardFun2)
+                          (squares : (int*int -> square))
                           : ((int*int) * (uint32 * (char*int))) list * int
         = processInDirection coord placedTiles dicts[minLen] dict hand adj 1 0 squares
         
@@ -145,7 +145,7 @@ module internal BestMove
                           (dict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
-                          (squares : boardFun2)
+                          (squares : (int*int -> square))
                           : ((int*int) * (uint32 * (char*int))) list * int
         = processInDirection coord placedTiles dicts[minLen] dict hand adj 0 1 squares
         
@@ -156,15 +156,20 @@ module internal BestMove
         =
         let adj = adjSquares placedTiles
         let adjSet = Set.ofList adj
+        let squares = fun c -> if Map.containsKey c placedTiles
+                                then board.defaultSquare
+                                else match board.squares c with
+                                      | StateMonad.Result.Success v -> v.Value
+                                      | StateMonad.Result.Failure _ -> failwith "Failed to get square."
         
         let rec aux (startSquares: ((int*int)*int) list) (down : bool)  =
             Array.Parallel.map
                 (
                  fun (coord, minlen) ->
                     if down then
-                        processDown coord minlen placedTiles dicts dicts[0] hand adjSet board.squares
+                        processDown coord minlen placedTiles dicts dicts[0] hand adjSet squares
                     else
-                        processRight coord minlen placedTiles dicts dicts[0] hand adjSet board.squares
+                        processRight coord minlen placedTiles dicts dicts[0] hand adjSet squares
                 )
                 (List.toArray startSquares)  
             
