@@ -73,11 +73,11 @@ module internal BestMove
                     let word = (aux 0)
                     word.Length < 2 || not (Dictionary.lookup word legalDict)
                     
-                let rec getWordStartingHere m coord d r : Eval.word =
+                let rec getWordStartingHere (m : Map<int * int,uint32 * (char * int)>) coord d r : ((int*int)*(uint32*(char*int))) list =
                     let x, y = coord
                     let rec aux i = 
                         match (Map.containsKey (x+r*i,y+d*i) m) with
-                        | true -> (Map.find (x+r*i,y+d*i) m |> snd) :: aux (i + 1)
+                        | true -> ((x+r*i,y+d*i),(Map.find (x+r*i,y+d*i) m)) :: aux (i + 1)
                         | false -> []
                     aux 0 
                     
@@ -120,7 +120,7 @@ module internal BestMove
                                                   let words = [getWordStartingHere m (move.Item 0 |> fst) d r]
                                                   // intentional rotation shift as we are looking at crossing words
                                                   let words = List.fold (fun words (coord,_) -> (getWordStartingHere m (toBegining coord -r -d) r d) :: words) words move
-                                                  [(move, Points.getMovePoints squares move (Map.toList m) words)]
+                                                  [(move, Points.getMovePoints squares move words)]
                                               else
                                                   []
                                     List.maxBy snd lst 

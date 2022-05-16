@@ -44,9 +44,16 @@ module internal ScrabbleBot.Points
             let composedFunction = List.fold (fun s f -> s >> f) id squareFunctions
             composedFunction 0
             
-    let getMovePoints (squares : int*int -> square) (move : ((int*int)*(uint32*(char*int))) list) (tiles : ((int * int) * (uint32 * (char * int))) list) (words : word list) : int = 
+    let getMovePoints (squares : int*int -> square) (move : ((int*int)*(uint32*(char*int))) list) (words : ((int*int)*(uint32*(char*int))) list list) : int = 
         let wordLengthPoints = if move.Length = 7 then 50 else 0
-        let squares = List.map (fun (coord, _) -> squares coord) tiles
-        let wordPoints = List.fold (fun s (w : word) -> if w.Length > 1 then s + (calculatePoints squares w) else s) 0 words
+        let wordPoints = List.fold (fun s (w : ((int*int)*(uint32*(char*int))) list) ->
+                            if w.Length > 1
+                            then s + (calculatePoints   // Calculate points for current word
+                                          (List.map (fun (coord, _) -> squares coord) w)    // Get squares at the tiles coordinates
+                                          (List.fold (fun s wrd -> (wrd |> snd |> snd) :: s)    // Get list of tiles (the word)
+                                            [] w)
+                                     )
+                            else s
+                            ) 0 words
         wordLengthPoints + wordPoints
         
