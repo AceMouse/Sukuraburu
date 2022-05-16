@@ -16,7 +16,7 @@ module internal ScrabbleBot.Points
         if (((usedMask &&& (1uy<<<i)) = 0uy) && (i < hand.Length))
         then
             let setList = hand[i] |> snd |> Set.toList
-            let l = List.init setList.Length (fun j -> (i,((fst hand[i]),setList[j]))) @ lst
+            let l = List.init 1 (fun j -> (i,((fst hand[i]),setList[j]))) @ lst
             tilePoints usedMask hand l (i+1)
         else if (i < hand.Length)
         then

@@ -57,21 +57,24 @@ module internal BestMove
                 let rec toBegining coord d r =
                     let x, y = coord
                     let rec aux i = 
-                        match (placedTiles.ContainsKey (x+r*i,y+d*i)) with
+                        match (placedTiles.ContainsKey (x+r*(i+1),y+d*(i+1))) with
                         | true -> aux (i + 1)
                         | false -> (x+r*i,y+d*i)
                     aux 0
                 
                 let rec illegal (ch:char) (coord:int*int) d r : bool=
                     // intentional rotation flip
+                    let cx, cy = coord
                     let start = toBegining coord -r -d
                     let x, y = start
                     let rec aux i = 
                         match (placedTiles.ContainsKey (x+d*i,y+r*i)) with
                         | true -> (placedTiles.Item (x+d*i,y+r*i) |> snd |> fst |> string ) + (aux (i + 1))
                         | false -> if (x+d*i,y+r*i) = coord then (ch |> string) + (aux (i + 1)) else ""
+                    
                     let word = (aux 0)
-                    word.Length < 2 || not (Dictionary.lookup word legalDict)
+                    let ret = word.Length < 2 || (not (Dictionary.lookup word legalDict))
+                    ret
                     
                 let rec getWordStartingHere (m : Map<int * int,uint32 * (char * int)>) coord d r : ((int*int)*(uint32*(char*int))) list =
                     let x, y = coord
@@ -115,7 +118,7 @@ module internal BestMove
                                     // 2. the one we get if we continue the word with ch
                                     // 3. the one we get if we end on ch (only available if step resulted in a word ending on ch and there is not an already placed tile directly following ch)
                                     let lst = [s; aux (x+r,y+d) hand usedMask dict move] @
-                                              if b && (not (placedTiles.ContainsKey (x+r,y+d))) then
+                                              if move.Length > 0 && b && (not (placedTiles.ContainsKey (x+r,y+d))) then
                                                   let m = List.fold (fun s (coord,tile) -> Map.add coord tile s) placedTiles move
                                                   let words = [getWordStartingHere m (move.Item 0 |> fst) d r]
                                                   // intentional rotation shift as we are looking at crossing words
@@ -131,27 +134,29 @@ module internal BestMove
                 
             aux coord hand 0uy dict []
     
-    let processDown coord minLen (placedTiles : Map<int*int, uint32 * (char*int)>)
-                          (dicts : Dictionary.Dict list)
+    let processDown coord (placedTiles : Map<int*int, uint32 * (char*int)>)
                           (dict : Dictionary.Dict)
+                          (legaldict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
                           (squares : (int*int -> square))
                           : ((int*int) * (uint32 * (char*int))) list * int
-        = processInDirection coord placedTiles dicts[minLen] dict hand adj 1 0 squares
+        = processInDirection coord placedTiles dict legaldict hand adj 1 0 squares
         
-    let processRight coord minLen (placedTiles : Map<int*int, uint32 * (char*int)>)
-                          (dicts : Dictionary.Dict list)
-                          (dict : Dictionary.Dict)
+    let processRight coord (placedTiles : Map<int*int, uint32 * (char*int)>)
+                          (dict : Dictionary.Dict )
+                          (legaldict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
                           (squares : (int*int -> square))
                           : ((int*int) * (uint32 * (char*int))) list * int
-        = processInDirection coord placedTiles dicts[minLen] dict hand adj 0 1 squares
+        =
+            let x,y = coord
+            processInDirection coord placedTiles dict legaldict hand adj 0 1 squares
         
     let suggestMove (board : Parser.board)
                     (placedTiles : Map<int*int, uint32 * (char*int)>)
-                    (dicts : Dictionary.Dict list)
+                    (dicts : Map<int,Dictionary.Dict>)
                     (hand : (uint32 * Set<char*int>) list)
         =
         let adj = adjSquares placedTiles
@@ -163,13 +168,13 @@ module internal BestMove
                                       | StateMonad.Result.Failure _ -> failwith "Failed to get square."
         
         let rec aux (startSquares: ((int*int)*int) list) (down : bool)  =
-            Array.map
+            Array.Parallel.map
                 (
                  fun (coord, minlen) ->
                     if down then
-                        processDown coord minlen placedTiles dicts dicts[0] hand adjSet squares
+                        processDown coord placedTiles (dicts.Item (max minlen 2)) (dicts.Item 2) hand adjSet squares
                     else
-                        processRight coord minlen placedTiles dicts dicts[0] hand adjSet squares
+                        processRight coord placedTiles (dicts.Item (max minlen 2)) (dicts.Item 2) hand adjSet squares
                 )
                 (List.toArray startSquares)  
             
