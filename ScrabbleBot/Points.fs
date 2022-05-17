@@ -20,7 +20,14 @@ module internal ScrabbleBot.Points
             tilePoints usedMask hand lst (i+1)
         else
             lst
-            
+  
+    let getWord (word : word) =
+        (List.fold (fun s (c : char * int) -> (c |> fst) :: s) [] word) |> List.toArray |> System.String
+    
+    let getMoveWord (word : ((int*int)*(uint32*(char*int))) list) =
+        (List.foldBack (fun (c : (int*int)*(uint32*(char*int))) s -> (c |> snd |> snd |> fst) :: s) word []) |> List.toArray |> System.String
+
+              
     let calculatePoints (squares : square list) (word : word) =
             // Partially apply square functions to word
             let partiallyApplied = List.mapi (fun i x -> List.map (fun (p,sf) -> (p, sf word i)) (Map.toList x)) squares
@@ -40,7 +47,7 @@ module internal ScrabbleBot.Points
             // Compose square functions
             let composedFunction = List.fold (fun s f -> s >> f) id squareFunctions
             composedFunction 0
-            
+        
     let getMovePoints (squares : int*int -> square) (move : ((int*int)*(uint32*(char*int))) list) (words : ((int*int)*(uint32*(char*int))) list list) : int = 
         let wordLengthPoints = if move.Length = 7 then 50 else 0
         let wordPoints = List.fold (fun s (w : ((int*int)*(uint32*(char*int))) list) ->
@@ -52,5 +59,7 @@ module internal ScrabbleBot.Points
                                      )
                             else s
                             ) 0 words
+//        printfn "Total points: %d" wordPoints
+//        printfn "=========================================="
         wordLengthPoints + wordPoints
         

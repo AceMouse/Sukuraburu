@@ -30,8 +30,8 @@ let main argv =
     System.Console.Clear()
 
 
- //   let board        = ScrabbleUtil.StandardBoard.standardBoard ()
-    let board      = ScrabbleUtil.InfiniteBoard.infiniteBoard ()
+    let board        = ScrabbleUtil.StandardBoard.standardBoard ()
+ //   let board      = ScrabbleUtil.InfiniteBoard.infiniteBoard ()
 
 //    let board      = ScrabbleUtil.RandomBoard.randomBoard ()
 //    let board      = ScrabbleUtil.RandomBoard.randomBoardSeed (Some 42)
@@ -58,9 +58,10 @@ let main argv =
     let (dictionary, time) =
         time (fun () -> ScrabbleUtil.Dictionary.mkDict words dictAPI)
     
-    let players    = [("Sukuraburu", dictionary, Sukuraburu.Scrabble.startGame); ("OxyphenButazone", dictionary, Oxyphenbutazone.Scrabble.startGame);]
+    //let players    = [("Sukuraburu", dictionary, Sukuraburu.Scrabble.startGame); ("OxyphenButazone", dictionary, Oxyphenbutazone.Scrabble.startGame);]
 
-    //let players = spawnMultiples "Sukuraburu" dictionary Sukuraburu.Scrabble.startGame 2//"OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 2
+    let players = spawnMultiples "Sukuraburu" dictionary Sukuraburu.Scrabble.startGame 2
+    //let players = spawnMultiples "OxyphenButazone" dictionary Oxyphenbutazone.Scrabble.startGame 2
 
 
     do ScrabbleServer.Comm.startGame 
