@@ -6,7 +6,6 @@ module internal MultiSet
     let empty<'a when 'a : comparison> =
         {size = 0u; map = Map.empty<'a, uint32>}
 
-
     let isEmpty (x : MultiSet<_>) = x.size = 0u
 
     let size (x : MultiSet<_>) = x.size

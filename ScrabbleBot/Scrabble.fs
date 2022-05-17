@@ -47,7 +47,7 @@ module RegEx =
 
     let printHand pieces hand =
         hand |>
-        MultiSet.fold (fun _ x i -> System.Console.Write (sprintf "%d -> (%A, %d)\n" x (Map.find x pieces) i)) ()
+        MultiSet.fold (fun _ x i -> Console.Write (sprintf "%d -> (%A, %d)\n" x (Map.find x pieces) i)) ()
 
 module State = 
     // Make sure to keep your state localised in this module. It makes your life a whole lot easier.
@@ -85,20 +85,20 @@ module Scrabble =
             let move, change = if st.playerTurn = st.playerNumber then
                                     let move = BestMove.suggestMove st.board st.placedTiles dicts (MultiSet.toList st.hand pieces) 
                                     if not move.IsEmpty then
-                                        //if we find a valid move we play it
+                                        // if we find a valid move we play it
                                         debugPrint (sprintf "Player %d -> Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                                         send cstream (SMPlay move)
                                         
                                         debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) move) // keep the debug lines. They are useful.
                                         (Some(move), None)   
                                     else if (st.tilesLeft >= 7) then
-                                        //else if we are allowed to change our hand we change it all
+                                        // else if we are allowed to change our hand we change it all
                                         let change = List.map fst (MultiSet.toList st.hand pieces)
                                         send cstream (SMChange  change)
                                         debugPrint (sprintf "Player %d <- Server:\n%A\n" (State.playerNumber st) change) // keep the debug lines. They are useful.
                                         (None, Some(change))
                                     else
-                                        //if we can not find a valid move and there are not enough tiles to make it legal to exchange tiles we pass
+                                        // if we can not find a valid move and there are not enough tiles to make it legal to exchange tiles we pass
                                         send cstream SMPass
                                         (None, None)
                                         
@@ -217,7 +217,7 @@ module Scrabble =
                       hand =  %A
                       timeout = %A\n\n" numPlayers playerNumber playerTurn hand timeout)
 
-        //let dict = dictf true // Uncomment if using a gaddag for your dictionary
+        // let dict = dictf true // Uncomment if using a gaddag for your dictionary
         let dict = dictf false // Uncomment if using a trie for your dictionary
         let board = Parser.mkBoard boardP
         

@@ -43,7 +43,7 @@ module internal BestMove
                                  (dict : Dictionary.Dict) (legalDict : Dictionary.Dict) (hand : (uint32 * Set<char*int>) list)
                                  (adj: Set<int*int>)
                                  d r
-                                 (squares : (int*int -> square))
+                                 (squares : (int*int -> square option))
                                  : ((int*int) * (uint32 * (char*int))) list * int
         =
         if placedTiles.ContainsKey ((fst coord) - r, (snd coord) - d)
@@ -90,15 +90,15 @@ module internal BestMove
                 let explore =
                     let folder =
                         fun (s: ((int*int) * (uint32 * (char*int))) list * int) (idx, (id,(ch,pts))) ->
-                            //is there a tile placed at coord
+                            // is there a tile placed at coord
                             let placed = placedTiles.ContainsKey coord
-                            //tile is toExplore[i] unless there is already one placed
+                            // tile is toExplore[i] unless there is already one placed
                             let id,(ch,pts) = Option.defaultValue  (id,(ch,pts)) (placedTiles.TryFind coord)
                             // are we adjacent to an already placed til
                             let adjacent = adj.Contains coord
-                            //if so we check if the crossing word is legal
+                            // if so we check if the crossing word is legal
                             if adjacent && illegal ch coord d r then
-                                //if it is not we return with a previously discovered move
+                                // if it is not we return with a previously discovered move
                                 s
                             else
                                 // else we step forwards
@@ -113,7 +113,7 @@ module internal BestMove
                                     // if ch was not already placed we place it, we make sure to add it to the current move and mark it as used in the hand
                                     let move = move @ if not placed then [(coord, (id,(ch,pts)))] else []
                                     let usedMask = if not placed then (usedMask|||(1uy<<<(int idx))) else usedMask
-                                    //then we return the best move out of:
+                                    // then we return the best move out of:
                                     // 1. the previous best
                                     // 2. the one we get if we continue the word with ch
                                     // 3. the one we get if we end on ch (only available if step resulted in a word ending on ch and there is not an already placed tile directly following ch)
@@ -126,7 +126,7 @@ module internal BestMove
                                                   [(move, Points.getMovePoints squares move words)]
                                               else
                                                   []
-                                    List.maxBy snd lst 
+                                    List.maxBy snd lst
                             
                     List.fold folder ([], 0) toExplore
                     
@@ -139,7 +139,7 @@ module internal BestMove
                           (legaldict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
-                          (squares : (int*int -> square))
+                          (squares : (int*int -> square option))
                           : ((int*int) * (uint32 * (char*int))) list * int
         = processInDirection coord placedTiles dict legaldict hand adj 1 0 squares
         
@@ -148,7 +148,7 @@ module internal BestMove
                           (legaldict : Dictionary.Dict)
                           (hand : (uint32 * Set<char*int>) list)
                           (adj: Set<int*int>)
-                          (squares : (int*int -> square))
+                          (squares : (int*int -> square option))
                           : ((int*int) * (uint32 * (char*int))) list * int
         =
             let x,y = coord
@@ -161,11 +161,12 @@ module internal BestMove
         =
         let adj = adjSquares placedTiles
         let adjSet = Set.ofList adj
-        let squares = fun c -> if Map.containsKey c placedTiles
-                                then board.defaultSquare
-                                else match board.squares c with
-                                      | StateMonad.Result.Success v -> v.Value
-                                      | StateMonad.Result.Failure _ -> failwith "Failed to get square."
+        let squares (c:coord) =
+            if Map.containsKey c placedTiles
+            then Some board.defaultSquare
+            else match board.squares c with
+                  | StateMonad.Result.Success v -> v
+                  | StateMonad.Result.Failure _ -> failwith "Failed to get square."
         
         let rec aux (startSquares: ((int*int)*int) list) (down : bool)  =
             Array.Parallel.map
@@ -176,11 +177,8 @@ module internal BestMove
                     else
                         processRight coord placedTiles (dicts.Item (max minlen 2)) (dicts.Item 2) hand adjSet squares
                 )
-                (List.toArray startSquares)  
-            
-        // (coord, ((longestWord, length), dir))
-        // dir : Down = true, Right = false
-        
+                (List.toArray startSquares)
+                
         let right, down = if placedTiles.IsEmpty then startingSquares [board.center] else (startingSquares adj)
         
         let rlst = aux right false

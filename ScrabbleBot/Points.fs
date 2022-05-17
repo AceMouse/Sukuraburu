@@ -1,18 +1,12 @@
-
 module internal ScrabbleBot.Points
-
     open Eval
     open StateMonad
 
-    // a 1 -> DL
-    // b 2 -> TL
-    // c 3 -> DW
-    // d 4 -> TW
     let rec tilePoints (usedMask:byte) (hand : (uint32 * Set<char*int>) list) lst i =
         if (((usedMask &&& (1uy<<<i)) = 0uy) && (i < hand.Length))
         then
             let setList = hand[i] |> snd |> Set.toList
-            // uncomment to use wildcards correctly :) it's slow...
+            // uncomment to use wildcards correctly :D it's slow...
             let l = List.init 1(*setList.Length*) (fun j -> (i,((fst hand[i]),setList[j]))) @ lst
             tilePoints usedMask hand l (i+1)
         else if (i < hand.Length)
@@ -48,18 +42,19 @@ module internal ScrabbleBot.Points
             let composedFunction = List.fold (fun s f -> s >> f) id squareFunctions
             composedFunction 0
         
-    let getMovePoints (squares : int*int -> square) (move : ((int*int)*(uint32*(char*int))) list) (words : ((int*int)*(uint32*(char*int))) list list) : int = 
-        let wordLengthPoints = if move.Length = 7 then 50 else 0
-        let wordPoints = List.fold (fun s (w : ((int*int)*(uint32*(char*int))) list) ->
-                            if w.Length > 1
-                            then s + (calculatePoints   // Calculate points for current word
-                                          (List.map (fun (coord, _) -> squares coord) w)    // Get squares at the tiles coordinates
-                                          (List.fold (fun s wrd -> (wrd |> snd |> snd) :: s)    // Get list of tiles (the word)
-                                            [] w)
-                                     )
-                            else s
-                            ) 0 words
-//        printfn "Total points: %d" wordPoints
-//        printfn "=========================================="
-        wordLengthPoints + wordPoints
+    let getMovePoints (squares : int*int -> square option) (move : ((int*int)*(uint32*(char*int))) list) (words : ((int*int)*(uint32*(char*int))) list list) : int = 
+        let containsHole = List.fold (fun s tile -> (squares (fst tile)).IsNone || s) false move
+        if containsHole then -1000
+        else
+            let wordLengthPoints = if move.Length = 7 then 50 else 0
+            let wordPoints = List.fold (fun s (w : ((int*int)*(uint32*(char*int))) list) ->
+                                if w.Length > 1
+                                then s + (calculatePoints // Calculate points for current word
+                                              (List.map (fun (coord, _) -> (squares coord).Value) w) // Get squares at the tiles coordinates
+                                              (List.fold (fun s wrd -> (wrd |> snd |> snd) :: s) // Get list of tiles (the word)
+                                                [] w)
+                                         )
+                                else s
+                                ) 0 words
+            wordLengthPoints + wordPoints
         

@@ -197,11 +197,3 @@ module internal Eval
             lookup "_result_" >>=
             fun res -> m.TryFind res |> ret) |>
             evalSM (mkState [("_x_", fst coord); ("_y_", snd coord); ("_result_", 0)] word.Empty ["_x_"; "_y_"; "_result_"])
-
-//    type board = {
-//        center        : coord
-//        defaultSquare : squareFun
-//        squares       : boardFun
-//    }
-
-//    let mkBoard c defaultSq boardStmnt ids = failwith "Not implemented"
